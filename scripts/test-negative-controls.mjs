@@ -104,6 +104,10 @@ scenario('a missing build product is refused', () => {
   rmSync(join(clone, 'lib', 'client.js'), { force: true })
 }, 'missing build product lib/client.js')
 
+scenario('a missing build stamp is refused', () => {
+  rmSync(join(clone, 'lib', 'build-stamp.json'), { force: true })
+}, 'missing lib/build-stamp.json')
+
 scenario('a bogus files entry is refused', () => {
   const path = join(clone, 'package.json')
   const pkg = JSON.parse(readFileSync(path, 'utf8'))

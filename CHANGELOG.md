@@ -4,9 +4,10 @@
 
 First release: the machine-level inbox for DSH instances on one LAN.
 
-Installable three ways: the published npm tarball (no toolchain needed), a Git
-URL (the prepare hook builds in place), or a local directory that already
-carries `lib/`.
+Installable from the published npm tarball or straight from the Git URL: the
+repository ships the built `lib/` plus a `build-stamp.json` source hash, so no
+install-time build (and no Node toolchain on the target machine) is required.
+`release:check` refuses to pass when the stamp does not match `src/`.
 
 The mailbox data root follows `$DSH_HOME` (`~/.dsh` by default), so desktop
 installs keep it inside their own runtime home.

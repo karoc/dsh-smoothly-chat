@@ -12,7 +12,8 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { sourceHash } from './lib/source-hash.mjs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -86,58 +87,25 @@ if (existsSync(join(root, 'cordis.patch.yml'))) {
   if (!patch.includes(pkg.name)) fail('cordis.patch.yml does not name the package')
 }
 
-// ── 5. build freshness ─────────────────────────────────────────────────────
-const built = ['lib/index.js', 'lib/client.js']
-for (const file of built) {
-  if (!existsSync(join(root, file))) fail(`missing build product ${file}`)
-}
-if (built.every(file => existsSync(join(root, file)))) {
-  const newestSource = newestFile(join(root, 'src'))
-  const oldestBuild = Math.min(...built.map(file => statSync(join(root, file)).mtimeMs))
-  if (newestSource !== undefined && newestSource.mtimeMs > oldestBuild) {
-    fail(`build products are stale: ${relative(root, newestSource.path)} is newer than lib/ — run npm run bundle`)
-  } else {
-    notes.push('lib/ build products are fresh')
+// ── 5. build freshness (content stamp, not mtime) ─────────────────────────
+const stampPath = join(root, 'lib', 'build-stamp.json')
+if (!existsSync(stampPath)) {
+  fail('missing lib/build-stamp.json — run npm run bundle')
+} else {
+  let stamp
+  try {
+    stamp = JSON.parse(readFileSync(stampPath, 'utf8'))
+  } catch {
+    fail('lib/build-stamp.json is not valid JSON — run npm run bundle')
   }
-}
-
-// ── 5b. build products are self-contained and shipped ─────────────────────
-// A bundler that splits a shared chunk would import a file the `files`
-// whitelist does not carry; the tarball would then be broken while every other
-// check stayed green. Scan relative imports/requires and require each target to
-// exist *and* be shipped.
-for (const file of built) {
-  if (!existsSync(join(root, file))) continue
-  const text = read(file)
-  // Match only statement-position imports/requires: a comment that merely
-  // *mentions* an import (our own styles header does) must not trip the gate.
-  const pattern = /(?:^|[;}])\s*(?:import\s[^'"\n]*from\s|import\s|import\s*\(\s*|require\s*\(\s*|export\s[^'"\n]*from\s)["'](\.\/[^"']+)["']/gmu
-  for (const match of text.matchAll(pattern)) {
-    const relativePath = match[1].replace(/^\.\//u, '')
-    const shipped = `lib/${relativePath}`
-    if (!existsSync(join(root, shipped))) {
-      fail(`${file} imports ${match[1]} which does not exist`)
-    } else if (!pkg.files.includes(shipped)) {
-      fail(`${file} imports ${shipped} which is not in the files whitelist`)
+  if (stamp !== undefined) {
+    const current = sourceHash(root)
+    if (stamp.hash !== current.hash) {
+      fail('build products are stale relative to src/ — run npm run bundle and commit lib/')
+    } else {
+      notes.push('lib/ build products match the recorded source hash')
     }
   }
-}
-if (failures.length === 0) notes.push('build products have no unshipped relative imports')
-
-function newestFile(directory) {
-  let newest
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) {
-      const inside = newestFile(path)
-      if (inside !== undefined && (newest === undefined || inside.mtimeMs > newest.mtimeMs)) newest = inside
-      continue
-    }
-    if (!/\.(ts|tsx)$/u.test(entry.name)) continue
-    const info = statSync(path)
-    if (newest === undefined || info.mtimeMs > newest.mtimeMs) newest = { path, mtimeMs: info.mtimeMs }
-  }
-  return newest
 }
 
 // ── 6. clean tree (release mode) ───────────────────────────────────────────

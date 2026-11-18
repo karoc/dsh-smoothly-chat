@@ -17,7 +17,6 @@
     "lib/index.js",
     "lib/client.js",
     "cordis.patch.yml",
-    "scripts/prepare.mjs",
     "README.md",
     "README.zh.md",
     "CHANGELOG.md",
@@ -39,10 +38,9 @@
     }
   },
   "scripts": {
-    "bundle": "tsdown --config ./tsdown.config.ts",
-    "prepare": "node scripts/prepare.mjs",
+    "bundle": "tsdown --config ./tsdown.config.ts && node scripts/stamp-build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs && node scripts/test-prepare.mjs",
+    "test": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs",
     "release:check": "node scripts/release-check.mjs",
     "test:controls": "node scripts/test-negative-controls.mjs",
     "verify:all": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs && npx tsc --noEmit && node scripts/test-negative-controls.mjs",

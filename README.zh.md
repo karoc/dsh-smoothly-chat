@@ -21,8 +21,8 @@ dsh plugin --profile web add dsh-smoothly-chat
 装完必须**重启 `dsh web`**（新增 bundle 只在启动时加载），然后点左栏的信封图标。
 
 从 Git 安装（不必先发 npm）：DSH 的 **Plugins** 页 → 添加插件 → 填仓库地址，
-例如 `https://github.com/karoc/dsh-smoothly-chat`。安装钩子会在原地构建 `lib/`
-（需要网络下载开发工具链）；若安装的是已经带 `lib/` 的本地目录，则跳过构建。
+例如 `https://github.com/karoc/dsh-smoothly-chat`。仓库随源码提交了构建产物
+`lib/`（带源码哈希戳），因此目标机器无需 Node 工具链、也无需构建。
 
 本地开发安装：把 `"dsh-smoothly-chat": "link:/path/to/dsh-smoothly-chat"` 加进
 profile 的 `package.json` 依赖，并把 `dsh-smoothly-chat` 加进
@@ -88,8 +88,8 @@ outbox/<msgId>.json   待投递记录（重启后继续）
 ## 开发
 
 ```sh
-npm install       # prepare 钩子会在有工具链时构建 lib/
-npm run bundle    # 改代码后重新构建
+npm install
+npm run bundle    # 重新构建 lib/ 并刷新 lib/build-stamp.json（两者一并提交）
 npm test          # 协议 E2E + UI API + 宿主适配器，均不需要 DSH 进程
 npm run typecheck
 npm run release:check

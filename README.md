@@ -26,9 +26,9 @@ mail icon in the left sidebar.
 
 From a Git checkout (no npm publish needed): in the DSH **Plugins** page choose
 *Add plugin* and enter the repository URL, e.g.
-`https://github.com/karoc/dsh-smoothly-chat`. The install hook builds `lib/` in
-place (it needs network access for the dev toolchain); a folder install that
-already carries `lib/` skips the build.
+`https://github.com/karoc/dsh-smoothly-chat`. The repository ships the built
+`lib/` (with a source-hash stamp), so a Git install needs no Node toolchain and
+no build step on the target machine.
 
 Local development install: add `"dsh-smoothly-chat": "link:/path/to/dsh-smoothly-chat"`
 to the profile's `package.json` dependencies and `dsh-smoothly-chat` to its
@@ -106,8 +106,8 @@ into an agent session (deliberately: the inbox is isolated).
 ## Development
 
 ```sh
-npm install       # the prepare hook builds lib/ when a toolchain is present
-npm run bundle    # rebuild after a source change
+npm install
+npm run bundle    # rebuild lib/ and refresh lib/build-stamp.json (commit both)
 npm test          # protocol E2E + UI API + host adapter, all without a DSH process
 npm run typecheck
 npm run release:check
