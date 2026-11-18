@@ -4,6 +4,10 @@
 
 First release: the machine-level inbox for DSH instances on one LAN.
 
+Installable three ways: the published npm tarball (no toolchain needed), a Git
+URL (the prepare hook builds in place), or a local directory that already
+carries `lib/`.
+
 The mailbox data root follows `$DSH_HOME` (`~/.dsh` by default), so desktop
 installs keep it inside their own runtime home.
 

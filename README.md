@@ -24,6 +24,12 @@ dsh plugin --profile web add dsh-smoothly-chat
 Restart `dsh web` afterwards (a new bundle only loads at startup), then open the
 mail icon in the left sidebar.
 
+From a Git checkout (no npm publish needed): in the DSH **Plugins** page choose
+*Add plugin* and enter the repository URL, e.g.
+`https://github.com/karoc/dsh-smoothly-chat`. The install hook builds `lib/` in
+place (it needs network access for the dev toolchain); a folder install that
+already carries `lib/` skips the build.
+
 Local development install: add `"dsh-smoothly-chat": "link:/path/to/dsh-smoothly-chat"`
 to the profile's `package.json` dependencies and `dsh-smoothly-chat` to its
 `dsh.profile.bundles` list, then reinstall and restart.
@@ -100,9 +106,8 @@ into an agent session (deliberately: the inbox is isolated).
 ## Development
 
 ```sh
-npm install
-npm run bundle    # builds lib/; no prepare hook runs on install, so installing a
-                  # local directory never needs a build toolchain
+npm install       # the prepare hook builds lib/ when a toolchain is present
+npm run bundle    # rebuild after a source change
 npm test          # protocol E2E + UI API + host adapter, all without a DSH process
 npm run typecheck
 npm run release:check
