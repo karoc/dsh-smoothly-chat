@@ -13,6 +13,7 @@
 
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
+import { createServer } from 'node:net'
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -365,6 +366,31 @@ await scenario('unpairing removes the pair on both sides', async () => {
   } finally {
     await closeNode(a)
     await closeNode(b)
+  }
+})
+
+await scenario('a busy port falls through to the next free one', async () => {
+  const blocker = createServer()
+  const blockedPort = await new Promise((resolve) => {
+    blocker.listen(0, '127.0.0.1', () => { resolve(blocker.address().port) })
+  })
+  const node = await ChatNode.create({
+    root: await freshRoot('port'),
+    port: blockedPort,
+    bindHost: '127.0.0.1',
+    advertiseHost: '127.0.0.1',
+    name: 'port-node',
+    logger: () => {},
+  })
+  try {
+    const bound = await node.start()
+    assert.notEqual(bound, blockedPort, 'the occupied port must not be reported as bound')
+    assert.ok(bound > blockedPort && bound <= blockedPort + 9, `expected a nearby fallback port, got ${bound}`)
+    const state = await fetch(`http://127.0.0.1:${bound}/peer/v1/hello`).then(response => response.status).catch(() => 0)
+    assert.equal(state, 401, 'the fallback listener answers (with the usual 401 for an unsigned probe)')
+  } finally {
+    await closeNode(node)
+    await new Promise(resolve => { blocker.close(resolve) })
   }
 })
 
