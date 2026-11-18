@@ -108,6 +108,31 @@ if (!existsSync(stampPath)) {
   }
 }
 
+// ── 5b. build products exist and are self-contained ───────────────────────
+const built = ['lib/index.js', 'lib/client.js']
+for (const file of built) {
+  if (!existsSync(join(root, file))) fail(`missing build product ${file}`)
+}
+// A bundler that splits a shared chunk would import a file the `files`
+// whitelist does not carry; the tarball would then be broken while every other
+// check stayed green. Match only statement-position imports so a comment that
+// merely mentions one cannot trip the gate.
+for (const file of built) {
+  if (!existsSync(join(root, file))) continue
+  const text = read(file)
+  const pattern = /(?:^|[;}])\s*(?:import\s[^'"\n]*from\s|import\s|import\s*\(\s*|require\s*\(\s*|export\s[^'"\n]*from\s)["'](\.\/[^"']+)["']/gmu
+  for (const match of text.matchAll(pattern)) {
+    const relativePath = match[1].replace(/^\.\//u, '')
+    const shipped = `lib/${relativePath}`
+    if (!existsSync(join(root, shipped))) {
+      fail(`${file} imports ${match[1]} which does not exist`)
+    } else if (!pkg.files.includes(shipped)) {
+      fail(`${file} imports ${shipped} which is not in the files whitelist`)
+    }
+  }
+}
+if (failures.length === 0) notes.push('build products exist and have no unshipped relative imports')
+
 // ── 6. clean tree (release mode) ───────────────────────────────────────────
 if (!allowDirty) {
   try {
