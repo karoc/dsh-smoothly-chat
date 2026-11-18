@@ -115,6 +115,18 @@ scenario('a patch file that does not name the package is refused', () => {
   writeFileSync(join(clone, 'cordis.patch.yml'), '- insert:\n    - id: something-else\n      name: something-else\n')
 }, 'cordis.patch.yml does not name the package')
 
+scenario('a split chunk that is not shipped is refused', () => {
+  const chunk = join(clone, 'lib', 'public-deadbeef.js')
+  writeFileSync(chunk, 'export const x = 1\n')
+  const path = join(clone, 'lib', 'index.js')
+  writeFileSync(path, `${readFileSync(path, 'utf8')}\nimport './public-deadbeef.js'\n`)
+}, 'which is not in the files whitelist')
+
+scenario('a missing relative dependency is refused', () => {
+  const path = join(clone, 'lib', 'index.js')
+  writeFileSync(path, `${readFileSync(path, 'utf8')}\nimport './missing-chunk.js'\n`)
+}, 'which does not exist')
+
 // ── summary ────────────────────────────────────────────────────────────────
 rmSync(temp, { recursive: true, force: true })
 const failed = results.filter(entry => !entry.ok)

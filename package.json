@@ -51,7 +51,8 @@
     "postpublish": "node scripts/post-publish-check.mjs --wait 300"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18",
+    "dsh": "^0.2.2-rc.4"
   },
   "keywords": [
     "deepseek-harness",

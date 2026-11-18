@@ -101,6 +101,27 @@ if (built.every(file => existsSync(join(root, file)))) {
   }
 }
 
+// ── 5b. build products are self-contained and shipped ─────────────────────
+// A bundler that splits a shared chunk would import a file the `files`
+// whitelist does not carry; the tarball would then be broken while every other
+// check stayed green. Scan relative imports/requires and require each target to
+// exist *and* be shipped.
+for (const file of built) {
+  if (!existsSync(join(root, file))) continue
+  const text = read(file)
+  const pattern = /(?:from\s*|require\s*\(\s*|import\s*\(\s*)["'](\.\/[^"']+)["']/gu
+  for (const match of text.matchAll(pattern)) {
+    const relativePath = match[1].replace(/^\.\//u, '')
+    const shipped = `lib/${relativePath}`
+    if (!existsSync(join(root, shipped))) {
+      fail(`${file} imports ${match[1]} which does not exist`)
+    } else if (!pkg.files.includes(shipped)) {
+      fail(`${file} imports ${shipped} which is not in the files whitelist`)
+    }
+  }
+}
+notes.push('build products have no unshipped relative imports')
+
 function newestFile(directory) {
   let newest
   for (const entry of readdirSync(directory, { withFileTypes: true })) {

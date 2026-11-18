@@ -26,10 +26,14 @@ const CLIENT_EXTERNALS: readonly string[] = [
   '@deepseek-ai/dsh-client-locale/client',
 ]
 
-/** Node-half entries: the loader-facing host plugin plus the DSH-free core. */
-const node = {
-  name: ID,
-  entry: { index: 'src/index.ts', core: 'src/core/public.ts' },
+/**
+ * Node-half builds. Two *separate* builds on purpose: a single multi-entry
+ * build let rolldown split shared code into `public-<hash>.js`, which the
+ * `files` whitelist did not ship — the published bundler would have imported a
+ * chunk that was not in the tarball. Self-contained outputs make the whitelist
+ * (and the gate that checks relative imports) sufficient.
+ */
+const nodeBase = {
   outDir: 'lib',
   format: ['esm'],
   platform: 'node',
@@ -44,6 +48,12 @@ const node = {
     entryFileNames: '[name].js',
   },
 }
+
+/** The loader-facing host plugin. */
+const nodeIndex = { ...nodeBase, name: ID, entry: { index: 'src/index.ts' } }
+
+/** The DSH-free core imported by the repository's verification scripts. */
+const nodeCore = { ...nodeBase, name: `${ID}/core`, entry: { core: 'src/core/public.ts' } }
 
 /** Browser client bundle served at /plugins/dsh-smoothly-chat/client.js. */
 const client = {
@@ -70,4 +80,4 @@ const client = {
   },
 }
 
-export default defineConfig([node, client])
+export default defineConfig([nodeIndex, nodeCore, client])
