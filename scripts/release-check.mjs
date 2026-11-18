@@ -109,7 +109,9 @@ if (built.every(file => existsSync(join(root, file)))) {
 for (const file of built) {
   if (!existsSync(join(root, file))) continue
   const text = read(file)
-  const pattern = /(?:from\s*|import\s*\(\s*|import\s+|require\s*\(\s*)["'](\.\/[^"']+)["']/gu
+  // Match only statement-position imports/requires: a comment that merely
+  // *mentions* an import (our own styles header does) must not trip the gate.
+  const pattern = /(?:^|[;}])\s*(?:import\s[^'"\n]*from\s|import\s|import\s*\(\s*|require\s*\(\s*|export\s[^'"\n]*from\s)["'](\.\/[^"']+)["']/gmu
   for (const match of text.matchAll(pattern)) {
     const relativePath = match[1].replace(/^\.\//u, '')
     const shipped = `lib/${relativePath}`
@@ -120,7 +122,7 @@ for (const file of built) {
     }
   }
 }
-notes.push('build products have no unshipped relative imports')
+if (failures.length === 0) notes.push('build products have no unshipped relative imports')
 
 function newestFile(directory) {
   let newest
