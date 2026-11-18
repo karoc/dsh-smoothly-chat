@@ -157,6 +157,7 @@ export function InboxPage(props: InboxPageProps) {
   return (
     <div
       className={`dsc-root${dragging ? ' dsc-dragover' : ''}`}
+      data-dsc-root="smoothly-chat"
       onDragOver={(event) => { event.preventDefault(); setDragging(true) }}
       onDragLeave={(event) => { event.preventDefault(); setDragging(false) }}
       onDrop={(event) => {

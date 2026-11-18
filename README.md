@@ -108,4 +108,11 @@ npm run release:check
 
 `lib/core.js` is the DSH-free core the test scripts import; `lib/index.js` is
 the host half; `lib/client.js` is the browser bundle. Verification scripts never
-need a DSH process except the GUI check.
+need a DSH process except the GUI checks.
+
+Live GUI checks (they use the running instance; they never start a server):
+
+```sh
+DSH_WEB_URL='http://127.0.0.1:3080/?token=…' npm run verify:gui       # entry + panel render
+DSH_WEB_URL='http://127.0.0.1:3080/?token=…' npm run verify:gui:live  # two-way text + file against a script node
+```

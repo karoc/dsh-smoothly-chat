@@ -92,3 +92,10 @@ npm run release:check
 
 `lib/core.js` 是不依赖 DSH 的核心（验证脚本直接 import）；`lib/index.js` 是
 宿主半区；`lib/client.js` 是浏览器包。除 GUI 验收外，验证脚本都不需要 DSH 进程。
+
+真机 GUI 验收（使用正在运行的实例，不会另起服务）：
+
+```sh
+DSH_WEB_URL='http://127.0.0.1:3080/?token=…' npm run verify:gui       # 左栏入口 + 面板渲染
+DSH_WEB_URL='http://127.0.0.1:3080/?token=…' npm run verify:gui:live  # 与脚本节点互发文本与文件
+```

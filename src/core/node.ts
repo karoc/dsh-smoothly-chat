@@ -70,6 +70,9 @@ function isPrivate(address: string): boolean {
   return false
 }
 
+/** Cadence of the peer presence probe. */
+const PRESENCE_INTERVAL_MS = 15_000
+
 /** One machine's mailbox. */
 export class ChatNode {
   readonly store: Store
@@ -83,6 +86,7 @@ export class ChatNode {
   private readonly listeners = new Set<(event: ChatEvent) => void>()
   private started = false
   private startFailure: string | undefined
+  private presenceTimer: NodeJS.Timeout | undefined
 
   private constructor(options: ChatNodeOptions, store: Store) {
     this.store = store
@@ -165,11 +169,18 @@ export class ChatNode {
     }
     this.started = true
     void this.resume()
+    // Presence is a live fact: probe every paired peer on a fixed cadence so
+    // the panel's online dots and the "unreachable" hint stay honest.
+    this.presenceTimer = setInterval(() => { void this.probeAll() }, PRESENCE_INTERVAL_MS)
+    this.presenceTimer.unref?.()
+    void this.probeAll()
     return port
   }
 
   /** Stop listening and cancel retries. */
   async stop(): Promise<void> {
+    if (this.presenceTimer !== undefined) clearInterval(this.presenceTimer)
+    this.presenceTimer = undefined
     this.outbox.stop()
     await this.server.stop()
     this.started = false
