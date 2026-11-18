@@ -14,6 +14,9 @@
 
 ## 安装
 
+要求 DSH `^0.2.2-rc.3`（rc.3 与 rc.4 的差异只在模型转译与一个实验性 tunnel
+worker，插件相关的接口两边一致）。
+
 ```sh
 dsh plugin --profile web add dsh-smoothly-chat
 ```

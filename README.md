@@ -17,6 +17,9 @@ a panel — never in a conversation, never in a prompt, never in a token bill.
 
 ## Install
 
+Requires DSH `^0.2.2-rc.3` (rc.3 and rc.4 differ only in model-translation and an
+experimental tunnel worker; the plugin surfaces are identical in both).
+
 ```sh
 dsh plugin --profile web add dsh-smoothly-chat
 ```
