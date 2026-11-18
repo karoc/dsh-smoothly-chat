@@ -29,9 +29,17 @@ interface WebServerLike {
   }): () => void
 }
 
-/** Resolve the mailbox data root. */
+/**
+ * Resolve the mailbox data root. It follows DSH_HOME (the desktop app keeps its
+ * own runtime home, so the mailbox must not leak into ~/.dsh there), with an
+ * explicit DSH_SMOOTHLY_CHAT_DIR winning over everything.
+ */
 function dataRoot(): string {
-  return process.env.DSH_SMOOTHLY_CHAT_DIR ?? join(homedir(), '.dsh', 'smoothly-chat')
+  const explicit = process.env.DSH_SMOOTHLY_CHAT_DIR
+  if (explicit !== undefined && explicit.trim() !== '') return explicit
+  const home = process.env.DSH_HOME?.trim()
+  const base = home === undefined || home === '' ? join(homedir(), '.dsh') : home
+  return join(base, 'smoothly-chat')
 }
 
 /** Resolve the peer-server port. */

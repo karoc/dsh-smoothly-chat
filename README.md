@@ -71,7 +71,7 @@ tries to send (the request is refused and the message is marked failed).
 
 ## Data layout
 
-`~/.dsh/smoothly-chat/` (directory `0700`, `config.json` `0600`):
+`$DSH_HOME/smoothly-chat/` (`~/.dsh/smoothly-chat` by default; directory `0700`, `config.json` `0600`):
 
 ```
 config.json           device identity, peers (with keys), invitations

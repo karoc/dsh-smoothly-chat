@@ -4,6 +4,9 @@
 
 First release: the machine-level inbox for DSH instances on one LAN.
 
+The mailbox data root follows `$DSH_HOME` (`~/.dsh` by default), so desktop
+installs keep it inside their own runtime home.
+
 Default peer port is **47811**; if it is busy the next nine ports are tried and
 the panel reports the port actually bound.
 

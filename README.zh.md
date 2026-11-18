@@ -59,7 +59,7 @@ B 用邀请密钥对确认请求签名，A 验签通过即把 B 记入对端表�
 
 ## 数据布局
 
-`~/.dsh/smoothly-chat/`（目录 `0700`，`config.json` `0600`）：
+`$DSH_HOME/smoothly-chat/`（默认 `~/.dsh/smoothly-chat`；目录 `0700`，`config.json` `0600`）：
 
 ```
 config.json           设备身份、对端表（含密钥）、邀请
