@@ -109,7 +109,7 @@ if (built.every(file => existsSync(join(root, file)))) {
 for (const file of built) {
   if (!existsSync(join(root, file))) continue
   const text = read(file)
-  const pattern = /(?:from\s*|require\s*\(\s*|import\s*\(\s*)["'](\.\/[^"']+)["']/gu
+  const pattern = /(?:from\s*|import\s*\(\s*|import\s+|require\s*\(\s*)["'](\.\/[^"']+)["']/gu
   for (const match of text.matchAll(pattern)) {
     const relativePath = match[1].replace(/^\.\//u, '')
     const shipped = `lib/${relativePath}`
