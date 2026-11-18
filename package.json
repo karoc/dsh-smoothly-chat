@@ -39,7 +39,6 @@
   },
   "scripts": {
     "bundle": "tsdown --config ./tsdown.config.ts",
-    "prepare": "tsdown --config ./tsdown.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs",
     "release:check": "node scripts/release-check.mjs",

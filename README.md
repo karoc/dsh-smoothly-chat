@@ -101,7 +101,8 @@ into an agent session (deliberately: the inbox is isolated).
 
 ```sh
 npm install
-npm run bundle
+npm run bundle    # builds lib/; no prepare hook runs on install, so installing a
+                  # local directory never needs a build toolchain
 npm test          # protocol E2E + UI API + host adapter, all without a DSH process
 npm run typecheck
 npm run release:check
