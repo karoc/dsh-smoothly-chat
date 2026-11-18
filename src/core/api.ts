@@ -284,7 +284,7 @@ export function createApiHandler(node: ChatNode, options: ApiHandlerOptions = {}
     if (route === '/settings' && method === 'GET') {
       sendJson(res, 200, {
         ok: true,
-        settings: { name: node.self.name, port: node.store.root === '' ? 0 : node.port, maxUploadBytes },
+        settings: { name: node.self.name, port: node.port, maxUploadBytes },
       })
       return
     }

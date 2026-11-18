@@ -8,7 +8,6 @@ import { networkInterfaces } from 'node:os'
 import {
   formatPairingString,
   INVITE_TTL_MS,
-  normalizeRemoteAddress,
   originOf,
   parsePairingString,
   randomId,
@@ -408,13 +407,4 @@ export class ChatNode {
     return Object.fromEntries(this.presence)
   }
 
-  /** Persisted settings view (read-only for now). */
-  configPath(): string {
-    return `${this.store.root}/config.json`
-  }
-
-  /** Remote address helper used by the host adapter when logging. */
-  static remoteOf(address: string | undefined): string {
-    return normalizeRemoteAddress(address)
-  }
 }
