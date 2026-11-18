@@ -144,6 +144,11 @@ try {
   // signal; assert it before selecting the peer clears the mark.
   if ((await page.locator('.dsc-icon-dot').count()) === 0) fail('sidebar unread dot missing while a peer had unread mail')
   else note('sidebar unread dot shown')
+
+  // Presence is a host-side 15 s probe; the row must turn "online" on its own.
+  const online = await waitFor(async () => (await page.locator('.dsc-peer .dsc-dot.on').count()) > 0, 25_000)
+  if (!online) fail('peer never showed as online (presence probe did not run)')
+  else note('peer shown online by the presence probe')
   await peerRow.first().click()
   await page.waitForTimeout(800)
   if ((await page.locator(`text=${marker}`).count()) === 0) fail('inbound text did not render in the thread')
