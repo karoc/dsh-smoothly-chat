@@ -100,6 +100,15 @@ const CSS = `
   color: #fff;
   background: var(--dsw-alias-state-error-primary);
 }
+.dsc-self {
+  padding: 8px 12px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  font-size: 11px;
+  color: var(--dsw-alias-text-tertiary, var(--dsw-alias-label-tertiary));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .dsc-main {
   flex: 1;
   min-width: 0;

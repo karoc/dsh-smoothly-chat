@@ -246,6 +246,15 @@ export function InboxPage(props: InboxPageProps) {
           ))}
           {peers.length === 0 && <div className="dsc-hint" style={{ padding: '10px' }}>{tr('emptyPeers')}</div>}
         </div>
+        {state !== undefined && (
+          <div className="dsc-self">
+            {tr('selfLine', {
+              name: state.self.name,
+              address: state.addresses.find(row => !row.internal && row.family === 'IPv4')?.address ?? '127.0.0.1',
+              port: state.settings.port,
+            })}
+          </div>
+        )}
       </aside>
 
       <section className="dsc-main">

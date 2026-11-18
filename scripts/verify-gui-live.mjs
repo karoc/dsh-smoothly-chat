@@ -33,6 +33,7 @@ const failures = []
 const notes = []
 const tempRoots = []
 let node
+let pluginDeviceId
 
 function note(text) {
   notes.push(text)
@@ -112,7 +113,7 @@ try {
   note('invitation minted through the live API')
 
   const parsed = new URL(invite.string)
-  const pluginDeviceId = parsed.hash.slice(1).split('.')[0]
+  pluginDeviceId = parsed.hash.slice(1).split('.')[0]
 
   const nodeName = `verify-${randomBytes(3).toString('hex')}`
   node = await ChatNode.create({
@@ -139,6 +140,10 @@ try {
     return (await peerRow.count()) > 0
   }, 20_000)
   if (!textArrived) throw new Error(`peer row "${nodeName}" did not appear in the panel`)
+  // The unread dot lives on the sidebar entry and is the only always-visible
+  // signal; assert it before selecting the peer clears the mark.
+  if ((await page.locator('.dsc-icon-dot').count()) === 0) fail('sidebar unread dot missing while a peer had unread mail')
+  else note('sidebar unread dot shown')
   await peerRow.first().click()
   await page.waitForTimeout(800)
   if ((await page.locator(`text=${marker}`).count()) === 0) fail('inbound text did not render in the thread')
@@ -158,6 +163,14 @@ try {
   if (!fileRendered) fail('inbound file card did not render')
   else note('inbound file card rendered')
 
+  if (fileRendered) {
+    const downloadPromise = page.waitForEvent('download', { timeout: 10_000 }).catch(() => undefined)
+    await page.locator('.dsc-file-action').first().click().catch(() => {})
+    const download = await downloadPromise
+    if (download === undefined) fail('file download did not start from the file card')
+    else note(`file download started (${download.suggestedFilename()})`)
+  }
+
   // ── plugin → script: composer ────────────────────────────────────────────
   const reply = `reply-${randomBytes(4).toString('hex')}`
   await page.locator('.dsc-textarea').fill(reply)
@@ -176,6 +189,17 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error))
 } finally {
+  // Leave the user's mailbox as we found it: unpair the test node through the
+  // page before tearing it down.
+  if (node !== undefined && pluginDeviceId !== undefined) {
+    await page.evaluate(async (deviceId) => {
+      await fetch('/smoothly-chat/api/unpair', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      })
+    }, node.self.deviceId).catch(() => {})
+  }
   if (node !== undefined) await node.stop().catch(() => {})
   await browser.close()
   for (const root of tempRoots) await rm(root, { recursive: true, force: true })

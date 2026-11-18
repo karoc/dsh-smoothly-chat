@@ -36,8 +36,9 @@ to the profile's `package.json` dependencies and `dsh-smoothly-chat` to its
 B signs its confirmation with the invitation key; A records B as soon as that
 signature verifies, so both directions work immediately after the paste. No
 manual accept step on A (holding the key *is* the credential), no second paste.
-Invitations expire after 24 hours. Unpairing from either side drops the pair on
-both.
+Invitations expire after 24 hours. Unpairing drops the pair here immediately and
+tells the other side; if that machine is offline it learns the next time it
+tries to send (the request is refused and the message is marked failed).
 
 ## Network
 
@@ -48,9 +49,9 @@ both.
   the four signed endpoints; DSH's own web server is untouched.
 - Every machine must be reachable **inbound** on its mailbox port. A WSL2 distro
   in the default NAT mode is not: pair with it only after setting up a Windows
-  port forward (`netsh interface portproxy`) and a firewall rule. The panel
-  reports the local addresses it sees and warns when none of them is a private
-  LAN address.
+  port forward (`netsh interface portproxy`) and a firewall rule. The panel shows
+  the address and port it advertises for pairing, and warns when none of this
+  machine's addresses is a private LAN address.
 - Firewall: allow inbound TCP 47811 on each machine.
 
 ## Security model
@@ -65,7 +66,7 @@ both.
   session, run a tool, or read a conversation.
 - Files stream to disk with a SHA-256 check and an atomic rename; the name is
   reduced to a single safe path segment under the message id, so `../` cannot
-  escape. Default ceiling 200 MB (`maxUploadBytes`).
+  escape. Default ceiling 200 MB per file.
 - Pair keys never leave the host: the panel API strips them from every response.
 
 ## Data layout
