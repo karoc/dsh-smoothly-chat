@@ -322,6 +322,17 @@ export class Store {
     })
   }
 
+  /** One message by id within a thread. */
+  async messageById(peerId: string, id: string): Promise<ThreadMessage | undefined> {
+    const rows = await readJsonl(this.threadPath(peerId))
+    return foldThread(rows).find(message => message.id === id)
+  }
+
+  /** Whether a path lives inside this store's staging directory. */
+  isStaged(path: string): boolean {
+    return path.startsWith(join(this.root, 'tmp'))
+  }
+
   /** Whether a message id already landed in a thread (idempotent redelivery). */
   hasMessage(peerId: string, id: string): boolean {
     return this.messageIds.get(peerId)?.has(id) ?? false

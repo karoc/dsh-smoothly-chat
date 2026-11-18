@@ -80,7 +80,9 @@ export class ChatNode {
   private readonly onEvent: ((event: ChatEvent) => void) | undefined
   private readonly advertiseHost: string | undefined
   private readonly presence = new Map<string, Presence>()
+  private readonly listeners = new Set<(event: ChatEvent) => void>()
   private started = false
+  private startFailure: string | undefined
 
   private constructor(options: ChatNodeOptions, store: Store) {
     this.store = store
@@ -95,7 +97,7 @@ export class ChatNode {
       logger: this.logger,
       ...(options.maxFileBytes === undefined ? {} : { maxFileBytes: options.maxFileBytes }),
       now: this.now,
-      onInbox: (peerId, messageId) => { this.onEvent?.({ type: 'inbox', peerId, messageId }) },
+      onInbox: (peerId, messageId) => { this.emit({ type: 'inbox', peerId, messageId }) },
     })
     this.outbox = new Outbox({
       store,
@@ -103,7 +105,7 @@ export class ChatNode {
       logger: this.logger,
       now: this.now,
       onStatus: (peerId, messageId, status, error) => {
-        this.onEvent?.(error === undefined
+        this.emit(error === undefined
           ? { type: 'status', peerId, messageId, status }
           : { type: 'status', peerId, messageId, status, error })
       },
@@ -117,6 +119,24 @@ export class ChatNode {
     return new ChatNode(options, store)
   }
 
+  /** Add a listener for mailbox events (the UI's SSE hub). */
+  subscribe(listener: (event: ChatEvent) => void): () => void {
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  /** Fan an event out to the constructor callback and every subscriber. */
+  private emit(event: ChatEvent): void {
+    this.onEvent?.(event)
+    for (const listener of this.listeners) {
+      try {
+        listener(event)
+      } catch {
+        // A broken subscriber must not break delivery.
+      }
+    }
+  }
+
   /** Identity of this machine. */
   get self(): { deviceId: string; name: string } {
     return this.store.self
@@ -127,10 +147,21 @@ export class ChatNode {
     return this.server.port
   }
 
+  /** Why the listener failed to start, if it did. */
+  get lastError(): string | undefined {
+    return this.startFailure
+  }
+
   /** Start listening and resume whatever the outbox still holds. */
   async start(): Promise<number> {
     if (this.started) return this.server.port
-    const port = await this.server.start()
+    let port: number
+    try {
+      port = await this.server.start()
+    } catch (error) {
+      this.startFailure = error instanceof Error ? error.message : String(error)
+      throw error
+    }
     this.started = true
     void this.resume()
     return port
@@ -258,7 +289,7 @@ export class ChatNode {
       lastError: undefined,
     })
     this.logger(`[smoothly-chat] paired with ${reply.self.name} (${deviceId.slice(0, 8)}…)`)
-    this.onEvent?.({ type: 'peers' })
+    this.emit({ type: 'peers' })
     return updated ?? peer
   }
 
@@ -288,7 +319,7 @@ export class ChatNode {
     }
     await this.store.removePeer(deviceId)
     this.presence.delete(deviceId)
-    this.onEvent?.({ type: 'peers' })
+    this.emit({ type: 'peers' })
   }
 
   /** Queue one text message for each peer; returns one row per peer. */

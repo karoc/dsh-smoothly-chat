@@ -9,6 +9,7 @@
  */
 
 import { createReadStream } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import {
@@ -173,6 +174,9 @@ export class Outbox {
           if (outcome.kind === 'sent') {
             await this.store.appendStatus(candidate.peerId, candidate.id, 'sent', this.now())
             await this.store.deleteOutbox(candidate.id)
+            if (candidate.kind === 'file' && candidate.file !== undefined && this.store.isStaged(candidate.file.path)) {
+              await rm(candidate.file.path, { force: true })
+            }
             this.onStatus?.(candidate.peerId, candidate.id, 'sent')
             continue
           }
