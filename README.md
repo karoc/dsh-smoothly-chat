@@ -41,7 +41,7 @@ both.
 
 ## Network
 
-- The mailbox listens on **port 47810** by default (`DSH_SMOOTHLY_CHAT_PORT`,
+- The mailbox listens on **port 47811** by default (`DSH_SMOOTHLY_CHAT_PORT`,
   `DSH_SMOOTHLY_CHAT_BIND`, `DSH_SMOOTHLY_CHAT_DIR`, `DSH_SMOOTHLY_CHAT_NAME`).
 - It binds every interface so a machine with several addresses (WSL mirrored
   networking, VPN, multiple NICs) stays reachable. The exposed surface is only
@@ -51,7 +51,7 @@ both.
   port forward (`netsh interface portproxy`) and a firewall rule. The panel
   reports the local addresses it sees and warns when none of them is a private
   LAN address.
-- Firewall: allow inbound TCP 47810 on each machine.
+- Firewall: allow inbound TCP 47811 on each machine.
 
 ## Security model
 

@@ -4,6 +4,9 @@
 
 First release: the machine-level inbox for DSH instances on one LAN.
 
+Default peer port is **47811**; if it is busy the next nine ports are tried and
+the panel reports the port actually bound.
+
 ### Added
 - Peer protocol v1 over plain HTTP: `GET /peer/v1/hello`,
   `POST /peer/v1/pair`, `POST /peer/v1/messages`, `POST /peer/v1/files`,

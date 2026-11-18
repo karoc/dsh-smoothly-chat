@@ -143,20 +143,35 @@ export class PeerServer {
     return this.boundPort
   }
 
-  /** Begin listening; resolves with the bound port. */
-  async start(): Promise<number> {
-    await new Promise<void>((resolve, reject) => {
-      const onError = (error: Error): void => { reject(error) }
-      this.http.once('error', onError)
-      this.http.listen(this.boundPort, this.host, () => {
-        this.http.off('error', onError)
-        resolve()
-      })
-    })
-    const address = this.http.address() as AddressInfo | null
-    if (address !== null && typeof address === 'object') this.boundPort = address.port
-    this.logger(`[smoothly-chat] peer server listening on ${this.host}:${String(this.boundPort)}`)
-    return this.boundPort
+  /**
+   * Begin listening; resolves with the bound port.
+   * @param ports - candidate ports in preference order; a busy port falls
+   * through to the next one so a taken default never disables the mailbox.
+   */
+  async start(ports?: readonly number[]): Promise<number> {
+    const candidates = ports ?? [this.boundPort]
+    let lastError: unknown
+    for (const candidate of candidates) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const onError = (error: Error): void => { reject(error) }
+          this.http.once('error', onError)
+          this.http.listen(candidate, this.host, () => {
+            this.http.off('error', onError)
+            resolve()
+          })
+        })
+        const address = this.http.address() as AddressInfo | null
+        if (address !== null && typeof address === 'object') this.boundPort = address.port
+        this.logger(`[smoothly-chat] peer server listening on ${this.host}:${String(this.boundPort)}`)
+        return this.boundPort
+      } catch (error) {
+        lastError = error
+        if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error
+        this.logger(`[smoothly-chat] port ${String(candidate)} is busy, trying the next one`)
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError))
   }
 
   /** Stop listening and drop open sockets. */

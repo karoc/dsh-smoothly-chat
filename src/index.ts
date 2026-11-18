@@ -36,8 +36,8 @@ function dataRoot(): string {
 
 /** Resolve the peer-server port. */
 function peerPort(): number {
-  const raw = Number(process.env.DSH_SMOOTHLY_CHAT_PORT ?? '47810')
-  return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : 47810
+  const raw = Number(process.env.DSH_SMOOTHLY_CHAT_PORT ?? '47811')
+  return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : 47811
 }
 
 /** Host entry point. */

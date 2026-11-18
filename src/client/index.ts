@@ -41,19 +41,20 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'smoothly-chat: locale')
 
   const t = ctx.locale.bind(NS)
-  ctx.effect(() => ctx.slots.inject('main', () => ctx.slots.register({
+  // `slots.inject` owns its own effect/disposal — do not wrap it in ctx.effect.
+  ctx.slots.inject('main', () => ctx.slots.register({
     name: 'main',
     key: PANEL_ID,
     locale: NS,
-  }, InboxPage as unknown as never)), 'smoothly-chat: main panel')
+  }, InboxPage as unknown as never))
 
-  ctx.effect(() => ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
+  ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
     name: 'sidebar.panellist',
     id: PANEL_ID,
     order: 45,
     locale: NS,
     label: () => t('panel'),
-  }, InboxIcon as unknown as never)), 'smoothly-chat: sidebar entry')
+  }, InboxIcon as unknown as never))
 
   // Freshness starts with the plugin, not with the panel: the unread dot has to
   // be right while the user is looking at a conversation.

@@ -157,7 +157,8 @@ export class ChatNode {
     if (this.started) return this.server.port
     let port: number
     try {
-      port = await this.server.start()
+      const preferred = this.server.port
+      port = await this.server.start(Array.from({ length: 10 }, (_, offset) => preferred + offset))
     } catch (error) {
       this.startFailure = error instanceof Error ? error.message : String(error)
       throw error
