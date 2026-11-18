@@ -42,7 +42,9 @@
     "prepare": "tsdown --config ./tsdown.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs",
-    "release:check": "node scripts/release-check.mjs"
+    "release:check": "node scripts/release-check.mjs",
+    "test:controls": "node scripts/test-negative-controls.mjs",
+    "verify:all": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && npx tsc --noEmit && node scripts/test-negative-controls.mjs"
   },
   "engines": {
     "node": ">=18"
