@@ -102,7 +102,7 @@ into an agent session (deliberately: the inbox is isolated).
 ```sh
 npm install
 npm run bundle
-npm test          # dual-instance protocol E2E + UI API scenarios
+npm test          # protocol E2E + UI API + host adapter, all without a DSH process
 npm run typecheck
 npm run release:check
 ```

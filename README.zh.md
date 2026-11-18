@@ -86,7 +86,7 @@ outbox/<msgId>.json   待投递记录（重启后继续）
 ```sh
 npm install
 npm run bundle
-npm test          # 双实例协议 E2E + UI API 场景
+npm test          # 协议 E2E + UI API + 宿主适配器，均不需要 DSH 进程
 npm run typecheck
 npm run release:check
 ```

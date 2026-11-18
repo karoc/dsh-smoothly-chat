@@ -25,7 +25,7 @@ after a documentation fix (`git tag -f` + `git push --force origin <tag>`).
 ## Verification before every release
 
 ```sh
-npm test                 # protocol E2E (13 scenarios) + UI API scenarios (6)
+npm test                 # protocol E2E (14) + UI API (6) + host adapter (1)
 npm run typecheck
 npm run bundle
 npm run release:check    # structure gate: README parity, CHANGELOG, files, freshness, clean tree
