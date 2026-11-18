@@ -1,0 +1,83 @@
+{
+  "name": "dsh-smoothly-chat",
+  "version": "0.1.0",
+  "description": "DSH Smoothly Chat (思磨力讯): peer-to-peer text and file messaging between DSH instances on the same LAN — a machine-level inbox that never touches a conversation.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown --config ./tsdown.config.ts",
+    "prepare": "tsdown --config ./tsdown.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-peer-e2e.mjs",
+    "release:check": "node scripts/release-check.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "lan",
+    "messaging",
+    "file-transfer",
+    "inbox",
+    "p2p",
+    "smoothly",
+    "思磨力讯"
+  ],
+  "author": "karoc",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/karoc/dsh-smoothly-chat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/karoc/dsh-smoothly-chat/issues"
+  },
+  "homepage": "https://github.com/karoc/dsh-smoothly-chat",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "~18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.2.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^5.6.0"
+  }
+}
