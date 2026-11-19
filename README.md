@@ -1,5 +1,7 @@
 # DSH Smoothly Chat (思磨力讯)
 
+**[English](README.md) | [中文](README.zh.md)**
+
 Peer-to-peer text and file messaging between DeepSeek Harness instances on the
 same LAN. Every machine keeps its own **machine-level inbox**: messages land in
 a panel — never in a conversation, never in a prompt, never in a token bill.

@@ -1,5 +1,7 @@
 # DSH Smoothly Chat（思磨力讯）
 
+**[English](README.md) | [中文](README.zh.md)**
+
 同一局域网内多台 DeepSeek Harness 实例之间的文本与文件互通。每台机器维护自己的
 **机器级信箱**：消息进的是面板，不进任何会话、不进提示词、也不产生 token 消耗。
 
