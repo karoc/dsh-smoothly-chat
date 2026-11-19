@@ -150,21 +150,26 @@ try {
   else note('panel approval paired the requesting node')
 
   // ── script → plugin: text ────────────────────────────────────────────────
-  const marker = `hello-${randomBytes(4).toString('hex')}`
-  await node.sendText([pluginDeviceId], marker)
-  await node.flush()
+  // Select the test peer first: earlier runs may have left a real peer in the
+  // list, so "the first row" is not this run's node.
   const peerRow = page.locator('.dsc-peer', { hasText: nodeName })
-  const textArrived = await waitFor(async () => {
+  const peerAppeared = await waitFor(async () => {
     await ensurePanel(page)
     return (await peerRow.count()) > 0
   }, 20_000)
-  if (!textArrived) throw new Error(`peer row "${nodeName}" did not appear in the panel`)
-  // The panel is open on this peer, so new inbound mail must clear itself —
-  // the dot has no business staying lit while the user is looking at the thread.
-  const autoRead = await waitFor(async () => {
-    await ensurePanel(page)
-    return (await page.locator('.dsc-badge').count()) === 0
-  }, 8_000)
+  if (!peerAppeared) throw new Error(`peer row "${nodeName}" did not appear in the panel`)
+  await peerRow.first().click()
+  await page.waitForTimeout(600)
+
+  const marker = `hello-${randomBytes(4).toString('hex')}`
+  await node.sendText([pluginDeviceId], marker)
+  await node.flush()
+  const rendered = await waitFor(async () => (await page.locator(`text=${marker}`).count()) > 0, 20_000)
+  if (!rendered) fail('inbound text did not render in the thread')
+  else note('inbound text rendered')
+
+  // The selected thread is on screen, so the unread count must clear itself.
+  const autoRead = await waitFor(async () => (await page.locator('.dsc-badge').count()) === 0, 8_000)
   if (!autoRead) fail('unread badge stayed lit while the thread was on screen')
   else note('unread cleared automatically while the thread was on screen')
 
@@ -172,10 +177,6 @@ try {
   const online = await waitFor(async () => (await page.locator('.dsc-peer .dsc-dot.on').count()) > 0, 25_000)
   if (!online) fail('peer never showed as online (presence probe did not run)')
   else note('peer shown online by the presence probe')
-  await peerRow.first().click()
-  await page.waitForTimeout(800)
-  if ((await page.locator(`text=${marker}`).count()) === 0) fail('inbound text did not render in the thread')
-  else note('inbound text rendered')
 
   // ── script → plugin: file ────────────────────────────────────────────────
   const source = join(await tempDir('payload'), 'e2e-payload.bin')
