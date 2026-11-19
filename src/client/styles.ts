@@ -193,21 +193,27 @@ const CSS = `
 }
 .dsc-file {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 11px;
   border-radius: 10px;
   background: var(--dsw-alias-bg-module-platform);
   border: 1px solid var(--dsw-alias-border-l2);
-  min-width: 200px;
+  min-width: 220px;
+}
+.dsc-file-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .dsc-file-name { font-weight: 500; word-break: break-all; }
 .dsc-file-size { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
 .dsc-file-actions {
-  margin-left: auto;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 14px;
+  padding-top: 2px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
 }
 .dsc-file-action {
   margin-left: auto;

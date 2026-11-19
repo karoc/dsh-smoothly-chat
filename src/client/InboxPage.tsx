@@ -378,12 +378,23 @@ export function InboxPage(props: InboxPageProps) {
                 <div key={message.id} className={`dsc-msg ${message.dir === 'in' ? 'in' : 'out'}`}>
                   {message.kind === 'file' && message.file !== undefined ? (
                     <div className="dsc-file">
-                      <div>
-                        <div className="dsc-file-name">{message.file.name}</div>
-                        <div className="dsc-file-size">{formatSize(message.file.size)}</div>
+                      <div className="dsc-file-line">
+                        <div>
+                          <div className="dsc-file-name">{message.file.name}</div>
+                          <div className="dsc-file-size">{formatSize(message.file.size)}</div>
+                        </div>
+                        {message.dir === 'out' && message.status === 'pending' && (() => {
+                          const live = snapshot.progress[message.id]
+                          const percent = live !== undefined && live.total > 0 ? Math.round((live.sent / live.total) * 100) : undefined
+                          return (
+                            <span className="dsc-transfer" title={percent === undefined ? undefined : `${String(percent)}%`}>
+                              <span className="dsc-progress"><span className="dsc-progress-fill" style={{ width: `${String(percent ?? 8)}%` }} /></span>
+                            </span>
+                          )
+                        })()}
                       </div>
                       {message.dir === 'in' && (
-                        <span className="dsc-file-actions">
+                        <div className="dsc-file-actions">
                           <button type="button" className="dsc-file-action" onClick={() => { download(message) }}>
                             {tr('saveCopy')}
                           </button>
@@ -398,17 +409,8 @@ export function InboxPage(props: InboxPageProps) {
                           >
                             {tr('revealFolder')}
                           </button>
-                        </span>
+                        </div>
                       )}
-                      {message.dir === 'out' && message.status === 'pending' && (() => {
-                        const live = snapshot.progress[message.id]
-                        const percent = live !== undefined && live.total > 0 ? Math.round((live.sent / live.total) * 100) : undefined
-                        return (
-                          <span className="dsc-transfer" title={percent === undefined ? undefined : `${String(percent)}%`}>
-                            <span className="dsc-progress"><span className="dsc-progress-fill" style={{ width: `${String(percent ?? 8)}%` }} /></span>
-                          </span>
-                        )
-                      })()}
                     </div>
                   ) : (
                     <div className="dsc-bubble">{message.text}</div>
