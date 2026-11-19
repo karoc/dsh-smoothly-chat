@@ -110,9 +110,11 @@ outbox/<msgId>.json   pending deliveries (survive restarts)
   `tmp/`), then the host streams that copy to the peer. The sender's original
   file is not touched or needed afterwards.
 - The receiver writes its own copy at `files/<msgId>/<name>` **when the message
-  arrives**, and its Download button serves *that local copy*. It never pulls
-  from the sender, so deleting or moving the original after a successful send
-  changes nothing on the other side.
+  arrives**. The file card therefore offers **Save a copy** (a browser save of
+  the already-received file) and **Show folder** (opens the containing folder in
+  the OS file manager — the folder only, never the file itself). Neither action
+  pulls from the sender, so deleting or moving the original after a successful
+  send changes nothing on the other side.
 - The staged copy is deleted once delivery succeeds (and on a permanent
   failure). A message that never completes shows `failed`; the receiver keeps a
   partial file only if the transfer was interrupted — partials are discarded and

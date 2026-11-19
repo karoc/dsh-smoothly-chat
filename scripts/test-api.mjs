@@ -202,6 +202,53 @@ await scenario('upload delivers the exact bytes and the file route serves them b
   }
 })
 
+await scenario('the folder-reveal route validates and never executes the file', async () => {
+  const a = await makeNode('reveal-a')
+  const b = await makeNode('reveal-b')
+  try {
+    const invite = await call(a, '/invite', { method: 'POST' })
+    await call(b, '/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ invitation: invite.body.string }),
+    })
+    await call(a, '/requests/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: b.node.self.deviceId }),
+    })
+    await b.node.retryPendingPairs()
+    const bytes = Buffer.from('reveal me')
+    await call(a, `/upload?peer=${encodeURIComponent(b.node.self.deviceId)}&name=${encodeURIComponent('reveal.txt')}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: bytes,
+    })
+    await a.node.flush()
+    const thread = await call(b, `/thread?peer=${encodeURIComponent(a.node.self.deviceId)}`)
+    const message = thread.body.messages.at(-1)
+
+    const unknown = await call(b, '/reveal', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ peerId: a.node.self.deviceId, id: 'does-not-exist' }),
+    })
+    assert.equal(unknown.status, 404, 'an unknown message cannot be revealed')
+
+    const reveal = await call(b, '/reveal', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ peerId: a.node.self.deviceId, id: message.id }),
+    })
+    // Headless machines may lack a file manager; both answers prove the route
+    // resolved the file server-side instead of trusting a client path.
+    assert.ok([200, 501].includes(reveal.status), `unexpected reveal status ${reveal.status}`)
+  } finally {
+    await a.close()
+    await b.close()
+  }
+})
+
 await scenario('the event stream announces an inbound message', async () => {
   const a = await makeNode('sse-a')
   const b = await makeNode('sse-b')

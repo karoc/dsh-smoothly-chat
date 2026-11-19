@@ -203,6 +203,12 @@ const CSS = `
 }
 .dsc-file-name { font-weight: 500; word-break: break-all; }
 .dsc-file-size { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+.dsc-file-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
 .dsc-file-action {
   margin-left: auto;
   border: none;

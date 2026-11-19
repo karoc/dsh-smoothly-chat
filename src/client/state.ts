@@ -330,7 +330,15 @@ export async function retryDelivery(): Promise<void> {
   await refresh()
 }
 
-/** Fetch one received file as a blob and hand it to the browser. */
+/** Reveal the received file's folder in the OS file manager (folder only). */
+export async function revealFile(message: ThreadMessage): Promise<void> {
+  await request('/reveal', {
+    method: 'POST',
+    body: JSON.stringify({ peerId: message.peerId, id: message.id }),
+  })
+}
+
+/** Save a copy of an already-received file through the browser. */
 export async function downloadFile(message: ThreadMessage): Promise<void> {
   if (message.file === undefined) return
   const response = await fetch(

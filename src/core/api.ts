@@ -10,6 +10,7 @@
  * scripts can mount it on a throwaway server and test it end to end.
  */
 
+import { spawn } from 'node:child_process'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { rm, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -263,6 +264,36 @@ export function createApiHandler(node: ChatNode, options: ApiHandlerOptions = {}
 
     if (route === '/retry' && method === 'POST') {
       await node.flush()
+      sendJson(res, 200, { ok: true })
+      return
+    }
+
+    if (route === '/reveal' && method === 'POST') {
+      const body = await readJson<{ peerId?: string; id?: string }>(req)
+      if (typeof body.peerId !== 'string' || typeof body.id !== 'string') throw new ApiError(400, 'peerId and id are required')
+      const message = await node.store.messageById(body.peerId, body.id)
+      if (message?.file === undefined) throw new ApiError(404, 'file not found')
+      const path = join(node.store.fileDir(body.id), message.file.name)
+      const info = await stat(path).catch(() => undefined)
+      if (info === undefined || !info.isFile()) throw new ApiError(404, 'file not found')
+      // Only the containing folder is revealed: opening the file itself would
+      // execute whatever the peer sent.
+      const folder = node.store.fileDir(body.id)
+      const [command, args] = process.platform === 'darwin'
+        ? ['open', ['-R', path]]
+        : process.platform === 'win32'
+          ? ['explorer.exe', [`/select,${path}`]]
+          : ['xdg-open', [folder]]
+      const ok = await new Promise<boolean>((resolve) => {
+        try {
+          const child = spawn(command, args, { detached: true, stdio: 'ignore' })
+          child.once('error', () => { resolve(false) })
+          child.once('spawn', () => { child.unref(); resolve(true) })
+        } catch {
+          resolve(false)
+        }
+      })
+      if (!ok) throw new ApiError(501, 'no file manager available on this machine')
       sendJson(res, 200, { ok: true })
       return
     }

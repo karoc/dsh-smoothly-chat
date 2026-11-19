@@ -7,6 +7,10 @@
   the host→peer stream, reported over SSE and throttled to ~150 ms.
 - **Honest staged copies**: a failed permanent delivery now deletes the staged
   upload copy as well as the outbox record; a successful one already did.
+- **Correct file wording**: the receiver already owns the file, so the card now
+  offers "Save a copy" instead of "Download", plus "Show folder" which reveals
+  the containing directory in the OS file manager (folder only — the received
+  file is never executed).
 - **Localized UI details**: relative times, the request address line and upload
   copy now come from the dictionaries — the panel follows the DSH language
   setting (zh/en, other languages fall back to English).

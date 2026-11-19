@@ -23,6 +23,7 @@ import {
   denyRequest,
   downloadFile,
   formatSize,
+  revealFile,
   formatTime,
   pairWith,
   retryDelivery,
@@ -382,9 +383,22 @@ export function InboxPage(props: InboxPageProps) {
                         <div className="dsc-file-size">{formatSize(message.file.size)}</div>
                       </div>
                       {message.dir === 'in' && (
-                        <button type="button" className="dsc-file-action" onClick={() => { download(message) }}>
-                          {tr('download')}
-                        </button>
+                        <span className="dsc-file-actions">
+                          <button type="button" className="dsc-file-action" onClick={() => { download(message) }}>
+                            {tr('saveCopy')}
+                          </button>
+                          <button
+                            type="button"
+                            className="dsc-file-action"
+                            onClick={() => {
+                              void revealFile(message).catch((cause: unknown) => {
+                                setActionError(tr('revealFailed', { message: cause instanceof Error ? cause.message : String(cause) }))
+                              })
+                            }}
+                          >
+                            {tr('revealFolder')}
+                          </button>
+                        </span>
                       )}
                       {message.dir === 'out' && message.status === 'pending' && (() => {
                         const live = snapshot.progress[message.id]
