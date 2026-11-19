@@ -128,17 +128,25 @@ try {
   })
   await node.start()
   await node.pair(invite.string)
-  // The plugin owner approves through the panel API — the same call the
-  // request banner makes when the user clicks Approve.
-  await page.evaluate(async (deviceId) => {
-    await fetch('/smoothly-chat/api/requests/approve', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ deviceId }),
-    })
-  }, node.self.deviceId)
+  note('pairing request sent')
+
+  // The request must surface as a compact, expandable row — and the sidebar
+  // dot must announce it without a modal interrupting the page.
+  const requestHead = page.locator('.dsc-requests-head')
+  const requestVisible = await waitFor(async () => (await requestHead.count()) > 0, 15_000)
+  if (!requestVisible) fail('pairing request row did not appear in the panel')
+  else note('pairing request row appeared')
+  if ((await page.locator('.dsc-icon-dot').count()) === 0) fail('sidebar dot missing while a request awaited approval')
+  else note('sidebar dot announced the pending request')
+  if (requestVisible) {
+    await requestHead.click()
+    await page.waitForTimeout(300)
+    await page.locator('.dsc-request .dsc-btn.primary').first().click()
+    await page.waitForTimeout(600)
+  }
   await node.retryPendingPairs()
-  note('script node paired with the live plugin after approval')
+  if (node.store.peer(pluginDeviceId)?.pairedAt === undefined) fail('approval in the panel did not reach the requesting node')
+  else note('panel approval paired the requesting node')
 
   // ── script → plugin: text ────────────────────────────────────────────────
   const marker = `hello-${randomBytes(4).toString('hex')}`
@@ -150,10 +158,14 @@ try {
     return (await peerRow.count()) > 0
   }, 20_000)
   if (!textArrived) throw new Error(`peer row "${nodeName}" did not appear in the panel`)
-  // The unread dot lives on the sidebar entry and is the only always-visible
-  // signal; assert it before selecting the peer clears the mark.
-  if ((await page.locator('.dsc-icon-dot').count()) === 0) fail('sidebar unread dot missing while a peer had unread mail')
-  else note('sidebar unread dot shown')
+  // The panel is open on this peer, so new inbound mail must clear itself —
+  // the dot has no business staying lit while the user is looking at the thread.
+  const autoRead = await waitFor(async () => {
+    await ensurePanel(page)
+    return (await page.locator('.dsc-badge').count()) === 0
+  }, 8_000)
+  if (!autoRead) fail('unread badge stayed lit while the thread was on screen')
+  else note('unread cleared automatically while the thread was on screen')
 
   // Presence is a host-side 15 s probe; the row must turn "online" on its own.
   const online = await waitFor(async () => (await page.locator('.dsc-peer .dsc-dot.on').count()) > 0, 25_000)
