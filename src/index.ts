@@ -63,6 +63,7 @@ export function apply(ctx: Context): void {
     })
     node = created
     api = createApiHandler(created)
+    console.log(`[smoothly-chat] mailbox root: ${dataRoot()} (device ${created.self.deviceId.slice(0, 8)}…)`)
     try {
       await created.start()
     } catch (error) {

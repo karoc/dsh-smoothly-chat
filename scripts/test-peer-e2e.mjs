@@ -376,6 +376,36 @@ await scenario('an offline peer queues the message and receives it on return', a
   }
 })
 
+await scenario('identity and pairs survive a restart', async () => {
+  const a = await makeNode('persist-a')
+  const b = await makeNode('persist-b')
+  try {
+    await pairNodes(a, b)
+    const root = a.store.root
+    const deviceId = a.self.deviceId
+    const port = a.port
+    await a.stop()
+
+    const revived = await ChatNode.create({
+      root, port, bindHost: '127.0.0.1', advertiseHost: '127.0.0.1', name: 'persist-a', logger: () => {},
+    })
+    await revived.start()
+    try {
+      assert.equal(revived.self.deviceId, deviceId, 'the device id must be stable across restarts')
+      const peer = revived.store.peer(b.self.deviceId)
+      assert.equal(peer?.pairedAt !== undefined, true, 'the pair must survive a restart')
+      await revived.sendText([b.self.deviceId], 'after restart')
+      await revived.flush()
+      assert.equal((await b.store.readThread(deviceId)).at(-1)?.text, 'after restart', 'messages flow after the restart')
+      assert.equal(b.store.peer(deviceId)?.pairedAt !== undefined, true, 'the other side keeps the pair too')
+    } finally {
+      await revived.stop()
+    }
+  } finally {
+    await closeNode(b)
+  }
+})
+
 await scenario('a declined request is reported to the requester', async () => {
   const a = await makeNode('deny-a')
   const b = await makeNode('deny-b')

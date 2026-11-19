@@ -88,12 +88,13 @@ try {
   if (!(await page.locator('[data-dsc-root]').isVisible())) throw new Error('mailbox panel missing')
   note('panel rendered')
 
-  // Clean any peer left by an earlier run so the assertions below target this
-  // run's node — the kind of state hygiene a repeatable check needs.
+  // Clean only peers left by *this script* (its nodes are named verify-…) so a
+  // verification run can never delete a real pairing the user made.
   const cleaned = await page.evaluate(async () => {
     const state = await fetch('/smoothly-chat/api/state').then(response => response.json())
     const removed = []
     for (const peer of state.peers ?? []) {
+      if (!/^verify-/u.test(peer.name)) continue
       const response = await fetch('/smoothly-chat/api/unpair', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
