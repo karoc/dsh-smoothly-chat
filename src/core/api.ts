@@ -85,12 +85,22 @@ export interface ApiHandler {
   dispose(): void
 }
 
+/** What one update check learned. */
+export interface UpdateInfo {
+  installed: { version: string; commit?: string; builtAt?: string }
+  latest?: { commit: string; date?: string; message?: string }
+  upToDate: boolean
+  error?: string
+}
+
 /** Options for {@link createApiHandler}. */
 export interface ApiHandlerOptions {
   /** Route prefix owned by the host adapter. */
   prefix?: string
   maxUploadBytes?: number
   now?: () => number
+  /** Reads the installed build stamp and compares it with the repository HEAD. */
+  updateSource?: () => Promise<UpdateInfo>
 }
 
 /**
@@ -295,6 +305,21 @@ export function createApiHandler(node: ChatNode, options: ApiHandlerOptions = {}
       }
       req.on('close', close)
       res.on('close', close)
+      return
+    }
+
+    if (route === '/update' && method === 'GET') {
+      if (options.updateSource === undefined) throw new ApiError(501, 'update check is not available in this composition')
+      try {
+        sendJson(res, 200, { ok: true, ...await options.updateSource() })
+      } catch (error) {
+        sendJson(res, 200, {
+          ok: true,
+          installed: { version: 'unknown' },
+          upToDate: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
       return
     }
 

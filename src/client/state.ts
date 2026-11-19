@@ -72,6 +72,14 @@ export interface ThreadMessage {
   error?: string
 }
 
+/** What one update check learned. */
+export interface UpdateInfo {
+  installed: { version: string; commit?: string; builtAt?: string }
+  latest?: { commit: string; date?: string; message?: string }
+  upToDate: boolean
+  error?: string
+}
+
 /** Snapshot read by every component. */
 export interface InboxSnapshot {
   state: StateView | undefined
@@ -284,6 +292,11 @@ export async function unpairPeer(deviceId: string): Promise<void> {
   await request('/unpair', { method: 'POST', body: JSON.stringify({ deviceId }) })
   publish({ selected: null })
   await refresh()
+}
+
+/** Ask the host to compare the installed build with the repository's main. */
+export async function checkUpdates(): Promise<UpdateInfo> {
+  return request<UpdateInfo>('/update')
 }
 
 /** Ask the host to run the outbox now. */

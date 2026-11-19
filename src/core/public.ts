@@ -6,7 +6,7 @@
 
 export { ChatNode } from './node.ts'
 export { createApiHandler } from './api.ts'
-export type { ApiHandler, ApiHandlerOptions } from './api.ts'
+export type { ApiHandler, ApiHandlerOptions, UpdateInfo } from './api.ts'
 export type { ChatEvent, ChatNodeOptions, LocalAddress, Presence } from './node.ts'
 export { Store, defaultDeviceName } from './store.ts'
 export type { OutboxRecord } from './store.ts'

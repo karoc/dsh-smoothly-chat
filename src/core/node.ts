@@ -388,6 +388,7 @@ export class ChatNode {
     }
     await this.store.removePeer(deviceId)
     this.presence.delete(deviceId)
+    this.logger(`[smoothly-chat] unpair: removed ${peer?.name ?? deviceId.slice(0, 8)} (${deviceId.slice(0, 8)}…) at ${new Date(this.now()).toISOString()}`)
     this.emit({ type: 'peers' })
   }
 

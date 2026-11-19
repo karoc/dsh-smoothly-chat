@@ -503,7 +503,7 @@ export class PeerServer {
       throw new HttpError(400, 'bad-body', 'unpair body does not match the caller')
     }
     await this.store.removePeer(peer.deviceId)
-    this.logger(`[smoothly-chat] unpaired ${peer.name}`)
+    this.logger(`[smoothly-chat] unpair requested by ${peer.name} (${peer.deviceId.slice(0, 8)}…)`)
     sendJson(res, 200, { ok: true })
   }
 }

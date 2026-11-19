@@ -12,6 +12,10 @@ a panel — never in a conversation, never in a prompt, never in a token bill.
   thread per peer).
 - **Broadcast**: send to every peer at once — implemented as N independent
   messages sharing a batch id, so one dead peer cannot hold up the others.
+- **Update check in the panel**: one button compares the installed build (version
+  plus the git commit baked into `lib/build-stamp.json`) with the repository's
+  `main`, and says either "up to date" or which commit is newer. It never
+  installs anything — the actual update stays the Plugins page's job.
 - **Unread that behaves**: the dot and per-peer counts clear themselves while
   the thread is actually on screen; a hidden window or another panel keeps
   accumulating.

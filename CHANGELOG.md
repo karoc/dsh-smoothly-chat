@@ -26,6 +26,11 @@ the panel reports the port actually bound.
   permits asking; nothing is auto-accepted and a refusal is reported back.
 - Unread clears itself while a thread is actually on screen (visible window,
   panel showing that peer); a hidden window keeps counting.
+- A **Check for updates** button compares the installed build (version + the git
+  commit recorded in `lib/build-stamp.json`) with the repository's `main`; it
+  only reports, never installs.
+- Pair removals are now logged with device id and timestamp, so a vanished pair
+  can be traced to the actor that removed it.
 - The sidebar entry and empty state draw their own envelope SVG instead of the
   `IconMail*` family, which only exists from DSH 0.2.2-rc.4 on — on rc.3 the
   missing export made React throw and the renderer silently abdicated the whole

@@ -18,6 +18,7 @@ import {
 import { EnvelopeIcon } from './EnvelopeIcon.tsx'
 import {
   approveRequest,
+  checkUpdates,
   createInvite,
   denyRequest,
   downloadFile,
@@ -333,6 +334,23 @@ export function InboxPage(props: InboxPageProps) {
                 </div>
               </div>
               <span className="dsc-spacer" />
+              <button
+                type="button"
+                className="dsc-btn"
+                disabled={busy}
+                onClick={() => {
+                  void run(async () => {
+                    const info = await checkUpdates()
+                    const short = (commit?: string): string => commit === undefined ? '?' : commit.slice(0, 7)
+                    if (info.error !== undefined) setNotice(tr('updateFailed', { message: info.error }))
+                    else if (info.upToDate) setNotice(tr('updateCurrent', { version: info.installed.version, commit: short(info.installed.commit) }))
+                    else setNotice(tr('updateAvailable', { commit: short(info.latest?.commit), date: info.latest?.date ?? '' }))
+                  })
+                }}
+              >
+                <IconRefreshOutlineRegular size={13} />
+                {tr('updateCheck')}
+              </button>
               {confirmUnpair ? (
                 <div className="dsc-row">
                   <span className="dsc-hint">{tr('unpairConfirm', { name: peerName(peer) })}</span>

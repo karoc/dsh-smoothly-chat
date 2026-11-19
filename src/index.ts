@@ -11,10 +11,11 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
-import { ChatNode, createApiHandler, type ApiHandler } from './core/public.ts'
+import { ChatNode, createApiHandler, type ApiHandler, type UpdateInfo } from './core/public.ts'
 
 export const name = 'dsh-smoothly-chat'
 
@@ -48,6 +49,58 @@ function peerPort(): number {
   return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : 47811
 }
 
+/** Repository the update check compares against. */
+const REPOSITORY = 'karoc/dsh-smoothly-chat'
+
+/** Cached update answer, so a curious click cannot burn the anonymous rate limit. */
+let updateCache: { at: number; value: UpdateInfo } | undefined
+
+/**
+ * Compare the installed build stamp (version + git commit baked at build time)
+ * with the repository's current main. Read-only: it never installs anything.
+ */
+async function checkUpdate(): Promise<UpdateInfo> {
+  const now = Date.now()
+  if (updateCache !== undefined && now - updateCache.at < 10 * 60_000) return updateCache.value
+  let installed: UpdateInfo['installed'] = { version: 'unknown' }
+  try {
+    const stamp = JSON.parse(await readFile(new URL('./build-stamp.json', import.meta.url), 'utf8')) as {
+      commit?: string
+      builtAt?: string
+      package?: { version?: string }
+    }
+    installed = {
+      version: stamp.package?.version ?? 'unknown',
+      ...(stamp.commit === undefined ? {} : { commit: stamp.commit }),
+      ...(stamp.builtAt === undefined ? {} : { builtAt: stamp.builtAt }),
+    }
+  } catch {
+    // A hand-built copy may lack the stamp; the answer then names only the version.
+  }
+  let value: UpdateInfo
+  try {
+    const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/commits/main`, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'dsh-smoothly-chat' },
+      signal: AbortSignal.timeout(6_000),
+    })
+    if (!response.ok) throw new Error(`GitHub answered ${String(response.status)}`)
+    const data = await response.json() as { sha: string; commit?: { author?: { date?: string }; message?: string } }
+    value = {
+      installed,
+      latest: {
+        commit: data.sha,
+        ...(data.commit?.author?.date === undefined ? {} : { date: data.commit.author.date }),
+        ...(data.commit?.message === undefined ? {} : { message: data.commit.message.split('\n')[0] }),
+      },
+      upToDate: installed.commit !== undefined && data.sha === installed.commit,
+    }
+  } catch (error) {
+    value = { installed, upToDate: false, error: error instanceof Error ? error.message : String(error) }
+  }
+  updateCache = { at: now, value }
+  return value
+}
+
 /** Host entry point. */
 export function apply(ctx: Context): void {
   let node: ChatNode | undefined
@@ -62,7 +115,7 @@ export function apply(ctx: Context): void {
       logger: line => { console.log(line) },
     })
     node = created
-    api = createApiHandler(created)
+    api = createApiHandler(created, { updateSource: checkUpdate })
     console.log(`[smoothly-chat] mailbox root: ${dataRoot()} (device ${created.self.deviceId.slice(0, 8)}…)`)
     try {
       await created.start()

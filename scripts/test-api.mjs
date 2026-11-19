@@ -31,14 +31,14 @@ async function scenario(name, body) {
   }
 }
 
-async function makeNode(tag) {
+async function makeNode(tag, apiOptions = {}) {
   const root = await mkdtemp(join(tmpdir(), `dsc-api-${tag}-`))
   roots.push(root)
   const node = await ChatNode.create({
     root, port: 0, bindHost: '127.0.0.1', advertiseHost: '127.0.0.1', name: tag, logger: () => {},
   })
   await node.start()
-  const handler = createApiHandler(node)
+  const handler = createApiHandler(node, apiOptions)
   const server = createServer((req, res) => { handler(req, res) })
   await new Promise(resolve => { server.listen(0, '127.0.0.1', resolve) })
   const port = server.address().port
@@ -248,6 +248,42 @@ await scenario('the event stream announces an inbound message', async () => {
   } finally {
     await a.close()
     await b.close()
+  }
+})
+
+await scenario('the update check reports the installed build and degrades visibly', async () => {
+  const current = await makeNode('update-a', {
+    updateSource: async () => ({
+      installed: { version: '0.1.0', commit: 'abc1234' },
+      latest: { commit: 'abc1234', date: '2026-11-19T00:00:00Z' },
+      upToDate: true,
+    }),
+  })
+  const behind = await makeNode('update-b', {
+    updateSource: async () => ({
+      installed: { version: '0.1.0', commit: 'abc1234' },
+      latest: { commit: 'def5678' },
+      upToDate: false,
+    }),
+  })
+  const broken = await makeNode('update-c', {
+    updateSource: async () => { throw new Error('offline') },
+  })
+  try {
+    const fresh = await call(current, '/update')
+    assert.equal(fresh.status, 200)
+    assert.equal(fresh.body.upToDate, true)
+    assert.equal(fresh.body.installed.commit, 'abc1234')
+    const stale = await call(behind, '/update')
+    assert.equal(stale.body.upToDate, false)
+    assert.equal(stale.body.latest.commit, 'def5678')
+    const failed = await call(broken, '/update')
+    assert.equal(failed.status, 200, 'a failed check must not break the panel')
+    assert.match(failed.body.error, /offline/u)
+  } finally {
+    await current.close()
+    await behind.close()
+    await broken.close()
   }
 })
 
