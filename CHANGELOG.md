@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.3 — unreleased
+
+- **Paste to send**: files and screenshots pasted into the composer (Ctrl/Cmd+V)
+  are sent directly; plain text still pastes as text and is never turned into a
+  file. A clipboard button reads files explicitly for browsers that only expose
+  them through the Clipboard API (permission may be asked).
+
 ## v0.1.2 — unreleased
 
 - **Update check is version-aware**: it compares the installed version with the

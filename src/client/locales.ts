@@ -71,6 +71,10 @@ export const zh = {
   timeNow: '刚刚',
   requestAddress: '{address}:{port}',
   uploadProgress: '上传中 {percent}%',
+  pasteFiles: '从剪贴板粘贴文件',
+  clipboardEmpty: '剪贴板里没有文件（文本不会被当作文件发送）',
+  clipboardUnsupported: '当前浏览器不支持读取剪贴板文件，请用拖拽或选择文件',
+  clipboardDenied: '没有剪贴板读取权限，请在浏览器提示中允许，或改用拖拽/选择文件',
 } as const
 
 /** Translation key of this namespace. */
@@ -141,4 +145,8 @@ export const en: Record<ChatKey, string> = {
   timeNow: 'now',
   requestAddress: '{address}:{port}',
   uploadProgress: 'Uploading {percent}%',
+  pasteFiles: 'Paste files from clipboard',
+  clipboardEmpty: 'The clipboard holds no file (text is never sent as a file)',
+  clipboardUnsupported: 'This browser cannot read clipboard files — drag and drop or pick a file instead',
+  clipboardDenied: 'Clipboard permission was denied; allow it or use drag and drop',
 }

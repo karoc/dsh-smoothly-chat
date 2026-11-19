@@ -121,6 +121,11 @@ outbox/<msgId>.json   pending deliveries (survive restarts)
   failure). A message that never completes shows `failed`; the receiver keeps a
   partial file only if the transfer was interrupted — partials are discarded and
   never listed.
+- **Paste to send**: paste a file or a screenshot into the composer (Ctrl/Cmd+V)
+  and it is uploaded and sent; text pastes normally. A clipboard button reads
+  files explicitly where the browser only exposes them through the Clipboard API
+  (it may ask for permission). Copying a file in Finder is browser-dependent —
+  drag and drop or the file picker is the reliable fallback.
 - Both halves show a progress bar: the browser→host upload, then the host→peer
   stream (reported over SSE).
 - The panel follows the DSH language setting: Chinese and English dictionaries;

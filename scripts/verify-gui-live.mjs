@@ -210,6 +210,22 @@ try {
   if (!delivered) fail('outbound message from the composer never reached the script node')
   else note('composer message delivered to the script node')
 
+  // ── paste a file into the composer ──────────────────────────────────────
+  const pastedName = `pasted-${randomBytes(3).toString('hex')}.bin`
+  await page.evaluate((name) => {
+    const area = document.querySelector('.dsc-textarea')
+    if (area === null) throw new Error('composer textarea missing')
+    const data = new DataTransfer()
+    data.items.add(new File([new Uint8Array([1, 2, 3, 4, 5, 6, 7])], name, { type: 'application/octet-stream' }))
+    area.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+  }, pastedName).catch(error => fail(`could not dispatch the paste event: ${error.message}`))
+  const pasted = await waitFor(async () => {
+    const thread = await node.store.readThread(pluginDeviceId)
+    return thread.some(message => message.dir === 'in' && message.file?.name === pastedName)
+  }, 15_000)
+  if (!pasted) fail('a file pasted into the composer never reached the peer')
+  else note('pasted file delivered to the peer')
+
   await page.screenshot({ path: '.verify/gui-live.png' }).catch(() => {})
 
   const crash = consoleErrors.find(line => /slot entry crashed|Maximum update depth/u.test(line))

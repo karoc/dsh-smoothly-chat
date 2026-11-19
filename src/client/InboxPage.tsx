@@ -118,15 +118,66 @@ export function InboxPage(props: InboxPageProps) {
     })
   }
 
-  const attach = (files: FileList | null): void => {
-    const file = files?.[0]
-    if (file === undefined) return
-    setUpload({ sent: 0, total: file.size })
+  const sendFiles = (files: File[]): void => {
+    if (files.length === 0) return
     void run(async () => {
+      for (const file of files) {
+        setUpload({ sent: 0, total: file.size })
+        try {
+          await sendFile(file, broadcast, (sent, total) => { setUpload({ sent, total }) })
+        } finally {
+          setUpload(null)
+        }
+      }
+    })
+  }
+
+  const attach = (files: FileList | null): void => {
+    if (files === null || files.length === 0) return
+    sendFiles(Array.from(files))
+  }
+
+  /** Files pasted directly into the composer (screenshots, Finder copies). */
+  const onPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>): void => {
+    const files = Array.from(event.clipboardData?.files ?? [])
+    if (files.length === 0) return
+    event.preventDefault()
+    sendFiles(files)
+  }
+
+  /** Explicit clipboard read, for browsers that expose files only via the API. */
+  const pasteFromClipboard = (): void => {
+    void run(async () => {
+      if (typeof navigator.clipboard?.read !== 'function') {
+        setNotice(tr('clipboardUnsupported'))
+        return
+      }
+      let items
       try {
-        await sendFile(file, broadcast, (sent, total) => { setUpload({ sent, total }) })
-      } finally {
-        setUpload(null)
+        items = await navigator.clipboard.read()
+      } catch {
+        setNotice(tr('clipboardDenied'))
+        return
+      }
+      const files: File[] = []
+      for (const item of items) {
+        const type = item.types.find(candidate => candidate !== 'text/plain' && candidate !== 'text/html')
+        if (type === undefined) continue
+        const blob = await item.getType(type)
+        const extension = type.split('/')[1] ?? 'bin'
+        files.push(new File([blob], `clipboard-${String(Date.now())}.${extension}`, { type }))
+      }
+      if (files.length === 0) {
+        setNotice(tr('clipboardEmpty'))
+        return
+      }
+      for (const file of files) {
+        setUpload({ sent: 0, total: file.size })
+        try {
+          await sendFile(file, broadcast, (sent, total) => { setUpload({ sent, total }) })
+        } finally {
+          setUpload(null)
+        }
       }
     })
   }
@@ -437,6 +488,7 @@ export function InboxPage(props: InboxPageProps) {
                 placeholder={tr('messagePlaceholder')}
                 value={draft}
                 onChange={event => { setDraft(event.target.value) }}
+                onPaste={onPaste}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                     event.preventDefault()
@@ -461,6 +513,9 @@ export function InboxPage(props: InboxPageProps) {
                 />
                 <button type="button" className="dsc-btn dsc-icon-btn" title={tr('attach')} onClick={() => { fileRef.current?.click() }}>
                   <IconPaperclipOutlineRegular size={14} />
+                </button>
+                <button type="button" className="dsc-btn dsc-icon-btn" title={tr('pasteFiles')} onClick={pasteFromClipboard}>
+                  <IconCopyOutlineRegular size={14} />
                 </button>
                 <label className="dsc-check">
                   <input type="checkbox" checked={broadcast} onChange={event => { setBroadcast(event.target.checked) }} />
