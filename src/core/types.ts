@@ -24,6 +24,8 @@ export interface PeerRecord {
   lastSeenAt?: number
   /** Last transport/auth failure, cleared on the next success. */
   lastError?: string
+  /** The other machine refused pairing; stop asking until the user retries. */
+  pairDenied?: boolean
 }
 
 /** One outstanding invitation minted by this machine. */
@@ -35,6 +37,17 @@ export interface InviteRecord {
   usedAt?: number
 }
 
+/** One pairing request waiting for this machine's owner to approve it. */
+export interface PairRequestRecord {
+  deviceId: string
+  name: string
+  host: string
+  port: number
+  key: string
+  requestedAt: number
+  lastSeenAt: number
+}
+
 /** Local identity plus the peer table. */
 export interface ConfigFile {
   version: 1
@@ -42,6 +55,10 @@ export interface ConfigFile {
   name: string
   peers: PeerRecord[]
   invites: InviteRecord[]
+  /** Pairing requests awaiting a human decision (never auto-approved). */
+  requests: PairRequestRecord[]
+  /** Recent refusals, so a denied machine is told instead of retried forever. */
+  denied: Record<string, number>
 }
 
 /** Tunables surfaced by the settings page. */

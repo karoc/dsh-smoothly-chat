@@ -167,10 +167,13 @@ export class ChatNode {
       throw error
     }
     this.started = true
-    void this.resume()
+    void this.retryPendingPairs()
     // Presence is a live fact: probe every paired peer on a fixed cadence so
     // the panel's online dots and the "unreachable" hint stay honest.
-    this.presenceTimer = setInterval(() => { void this.probeAll() }, PRESENCE_INTERVAL_MS)
+    this.presenceTimer = setInterval(() => {
+      void this.probeAll()
+      void this.retryPendingPairs()
+    }, PRESENCE_INTERVAL_MS)
     this.presenceTimer.unref?.()
     void this.probeAll()
     return port
@@ -191,7 +194,7 @@ export class ChatNode {
   }
 
   /** Retry pair confirmations that never completed, then drain the outbox. */
-  private async resume(): Promise<void> {
+  async retryPendingPairs(): Promise<void> {
     for (const peer of this.store.peers()) {
       if (peer.pairedAt !== undefined) continue
       try {
@@ -289,19 +292,74 @@ export class ChatNode {
     if (!response.ok) {
       const detail = await response.text().catch(() => '')
       const error = `pairing rejected: HTTP ${String(response.status)} ${detail.slice(0, 200)}`
-      await this.store.patchPeer(deviceId, { lastError: error })
+      await this.store.patchPeer(deviceId, {
+        lastError: error,
+        ...(response.status === 403 ? { pairDenied: true } : {}),
+      })
       throw new Error(error)
     }
-    const reply = await response.json() as HelloResponse & { paired?: boolean }
+    const reply = await response.json() as HelloResponse & { paired?: boolean; pending?: boolean }
+    if (reply.pending === true && reply.paired !== true) {
+      // The other machine accepted the request but its owner has not approved
+      // it yet; stay unpaired and let the periodic retry observe the decision.
+      const pending = await this.store.patchPeer(deviceId, {
+        name: reply.self.name,
+        port: reply.self.port,
+        lastError: undefined,
+      })
+      return pending ?? peer
+    }
     const updated = await this.store.patchPeer(deviceId, {
       name: reply.self.name,
       port: reply.self.port,
       pairedAt: peer.pairedAt ?? this.now(),
       lastError: undefined,
+      pairDenied: false,
     })
     this.logger(`[smoothly-chat] paired with ${reply.self.name} (${deviceId.slice(0, 8)}…)`)
     this.emit({ type: 'peers' })
     return updated ?? peer
+  }
+
+  /** Approve a pending pairing request (the prompt shown in the panel). */
+  async approveRequest(deviceId: string): Promise<PeerRecord> {
+    const request = this.store.pairRequests().find(candidate => candidate.deviceId === deviceId)
+    if (request === undefined) throw new Error('no such pairing request')
+    const now = this.now()
+    const peer: PeerRecord = {
+      deviceId: request.deviceId,
+      name: request.name,
+      host: request.host,
+      port: request.port,
+      key: request.key,
+      addedAt: now,
+      pairedAt: now,
+      lastSeenAt: request.lastSeenAt,
+    }
+    await this.store.upsertPeer(peer)
+    await this.store.removePairRequest(deviceId)
+    await this.store.markInviteUsed(request.key, deviceId, now)
+    this.logger(`[smoothly-chat] approved pairing with ${peer.name} (${deviceId.slice(0, 8)}…)`)
+    this.emit({ type: 'peers' })
+    return peer
+  }
+
+  /** Decline a pending pairing request; the asking machine learns on its retry. */
+  async denyRequest(deviceId: string): Promise<void> {
+    await this.store.removePairRequest(deviceId)
+    await this.store.noteDenial(deviceId, this.now())
+    this.emit({ type: 'peers' })
+  }
+
+  /** Pending pairing requests awaiting a human decision. */
+  pairRequests(): { deviceId: string; name: string; host: string; port: number; requestedAt: number }[] {
+    return this.store.pairRequests().map(request => ({
+      deviceId: request.deviceId,
+      name: request.name,
+      host: request.host,
+      port: request.port,
+      requestedAt: request.requestedAt,
+    }))
   }
 
   /** Remove one pair on both sides (remote best effort). */

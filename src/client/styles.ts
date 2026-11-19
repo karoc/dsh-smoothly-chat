@@ -39,6 +39,34 @@ const CSS = `
   font-weight: 600;
   font-size: 13px;
 }
+.dsc-requests {
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+.dsc-requests-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dsc-request {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+}
 .dsc-peer-list {
   flex: 1;
   min-height: 0;

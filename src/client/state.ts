@@ -35,6 +35,15 @@ export interface AddressView {
   scope: 'loopback' | 'private' | 'public'
 }
 
+/** One pairing request awaiting this machine's approval. */
+export interface PairRequestView {
+  deviceId: string
+  name: string
+  host: string
+  port: number
+  requestedAt: number
+}
+
 /** Whole-mailbox state as the API reports it. */
 export interface StateView {
   ok: true
@@ -43,6 +52,7 @@ export interface StateView {
   addresses: AddressView[]
   lanReachable: boolean
   peers: PeerView[]
+  requests: PairRequestView[]
   settings: { port: number; maxUploadBytes: number }
   serverError: string | null
 }
@@ -82,6 +92,8 @@ const listeners = new Set<() => void>()
 let inflight: Promise<void> | undefined
 let refreshSeq = 0
 let started = false
+let panelVisible = false
+const autoRead = new Set<string>()
 
 /** Subscribe to snapshot replacements. */
 export function subscribe(listener: () => void): () => void {
@@ -150,6 +162,7 @@ export function refresh(): Promise<void> {
         threads[selected] = thread.messages
       }
       publish({ state, threads, selected, loading: false, error: undefined })
+      maybeAutoRead()
     } catch (error) {
       publish({ loading: false, error: messageOf(error) })
     } finally {
@@ -157,6 +170,32 @@ export function refresh(): Promise<void> {
     }
   })()
   return inflight
+}
+
+/** Tell the store whether the mailbox panel is on screen. */
+export function setPanelVisible(visible: boolean): void {
+  panelVisible = visible
+  if (visible) maybeAutoRead()
+}
+
+/**
+ * Read the selected thread while its panel is actually being watched: an open
+ * panel whose window is visible marks incoming messages read without the user
+ * having to click the already-selected row. Hidden windows and other panels
+ * keep accumulating unread, which is the point of the dot.
+ */
+function maybeAutoRead(): void {
+  if (!panelVisible) return
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+  const deviceId = snapshot.selected
+  if (deviceId === null) return
+  const unread = snapshot.state?.peers.find(peer => peer.deviceId === deviceId)?.unread ?? 0
+  if (unread === 0 || autoRead.has(deviceId)) return
+  autoRead.add(deviceId)
+  void request('/read', { method: 'POST', body: JSON.stringify({ peerId: deviceId }) })
+    .then(() => refresh())
+    .catch(() => {})
+    .finally(() => { autoRead.delete(deviceId) })
 }
 
 /** Select one peer, load its thread and clear its unread mark. */
@@ -221,9 +260,22 @@ export async function createInvite(): Promise<{ string: string; expiresAt: numbe
   return request<{ string: string; expiresAt: number }>('/invite', { method: 'POST' })
 }
 
-/** Pair with the machine named by an invitation string. */
-export async function pairWith(invitation: string): Promise<void> {
-  await request('/pair', { method: 'POST', body: JSON.stringify({ invitation }) })
+/** Pair with the machine named by an invitation string; returns the peer row. */
+export async function pairWith(invitation: string): Promise<PeerView | undefined> {
+  const result = await request<{ peer: PeerView }>('/pair', { method: 'POST', body: JSON.stringify({ invitation }) })
+  await refresh()
+  return result.peer
+}
+
+/** Approve one pending pairing request. */
+export async function approveRequest(deviceId: string): Promise<void> {
+  await request('/requests/approve', { method: 'POST', body: JSON.stringify({ deviceId }) })
+  await refresh()
+}
+
+/** Decline one pending pairing request. */
+export async function denyRequest(deviceId: string): Promise<void> {
+  await request('/requests/deny', { method: 'POST', body: JSON.stringify({ deviceId }) })
   await refresh()
 }
 
@@ -272,6 +324,7 @@ export function startClient(): void {
   }, 5_000)
   window.addEventListener('focus', () => { void refresh() })
   window.addEventListener('online', () => { void refresh() })
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refresh() })
   try {
     const source = new EventSource(`${API}/events`)
     source.onmessage = (event: MessageEvent<string>) => {

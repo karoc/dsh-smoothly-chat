@@ -1,7 +1,8 @@
 {
   "version": 1,
-  "hash": "0c48258a69f4851d71cac970eb04137c70540a45295d7f230ba9fc19dc2f7be6",
+  "hash": "0f8705fec3d6afcf4d4da1afc8e6d2167d789ce4a1cc48e3b0fbf647d39b9852",
   "files": [
+    "src/client/EnvelopeIcon.tsx",
     "src/client/InboxIcon.tsx",
     "src/client/InboxPage.tsx",
     "src/client/index.ts",
@@ -18,5 +19,5 @@
     "src/core/types.ts",
     "src/index.ts"
   ],
-  "builtAt": "2026-11-18T23:50:43.081Z"
+  "builtAt": "2026-11-19T01:05:18.455Z"
 }

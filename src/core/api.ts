@@ -136,6 +136,7 @@ export function createApiHandler(node: ChatNode, options: ApiHandlerOptions = {}
         addresses,
         lanReachable: addresses.some(row => !row.internal && row.scope === 'private'),
         peers,
+        requests: node.pairRequests(),
         settings: { port: node.port, maxUploadBytes },
         serverError: node.lastError ?? null,
       })
@@ -154,6 +155,22 @@ export function createApiHandler(node: ChatNode, options: ApiHandlerOptions = {}
       }
       const peer = await node.pair(body.invitation.trim())
       sendJson(res, 200, { ok: true, peer: publicPeer(peer, { unread: 0, reachable: false }) })
+      return
+    }
+
+    if (route === '/requests/approve' && method === 'POST') {
+      const body = await readJson<{ deviceId?: string }>(req)
+      if (typeof body.deviceId !== 'string' || body.deviceId === '') throw new ApiError(400, 'deviceId is required')
+      const peer = await node.approveRequest(body.deviceId)
+      sendJson(res, 200, { ok: true, peer: publicPeer(peer, { unread: 0, reachable: false }) })
+      return
+    }
+
+    if (route === '/requests/deny' && method === 'POST') {
+      const body = await readJson<{ deviceId?: string }>(req)
+      if (typeof body.deviceId !== 'string' || body.deviceId === '') throw new ApiError(400, 'deviceId is required')
+      await node.denyRequest(body.deviceId)
+      sendJson(res, 200, { ok: true })
       return
     }
 

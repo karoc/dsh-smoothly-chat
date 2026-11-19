@@ -20,9 +20,16 @@ the panel reports the port actually bound.
   `POST /peer/v1/pair`, `POST /peer/v1/messages`, `POST /peer/v1/files`,
   `POST /peer/v1/unpair` — HMAC-SHA256 per-pair signatures over method, path,
   timestamp, nonce and body digest; ±90 s clock window; nonce replay guard.
-- Pairing is mutual in one paste: the second machine confirms with the
-  invitation key it was given, and the first records it after the signature
-  verifies — no manual accept step, both directions usable immediately.
+- Pairing is a two-step handshake: the invited machine signs its request with
+  the invitation key, and the inviting machine's owner explicitly approves it in
+  the panel (compact request row, not a modal). Holding an invitation only
+  permits asking; nothing is auto-accepted and a refusal is reported back.
+- Unread clears itself while a thread is actually on screen (visible window,
+  panel showing that peer); a hidden window keeps counting.
+- The sidebar entry and empty state draw their own envelope SVG instead of the
+  `IconMail*` family, which only exists from DSH 0.2.2-rc.4 on — on rc.3 the
+  missing export made React throw and the renderer silently abdicated the whole
+  sidebar row. `scripts/check-icons.mjs` now pins every DSH icon to rc.3.
 - Broadcast: one independent message per peer sharing a `batchId`; a dead peer
   only stalls its own delivery queue.
 - Durable outbox under the data root: pending deliveries survive a restart and

@@ -304,14 +304,12 @@ export class PeerServer {
   // ── endpoints ──────────────────────────────────────────────────────────
 
   /**
-   * Accept a pairing confirmation. The caller signs with the invitation key,
-   * which is the only credential that can exist before both sides know each
-   * other — holding it *is* the authorization, so no manual accept step.
+   * Record a pairing request. Holding the invitation key proves the caller may
+   * *ask*; a human on this machine still decides. Nothing is paired until
+   * `approveRequest` runs, and a request never grants message access.
    */
   private async handlePair(req: IncomingMessage, res: ServerResponse, remote: string): Promise<void> {
     if (req.method !== 'POST') throw new HttpError(405, 'method-not-allowed', 'use POST')
-    // Validate the credential headers before reading any bytes: an unsigned
-    // caller must not be able to make this process buffer a body at all.
     const signed = this.signedRequest(req)
     const body = await readBody(req, MAX_PAIR_BYTES)
     const bodySha = sha256Hex(body)
@@ -343,28 +341,42 @@ export class PeerServer {
     if (matched === undefined) throw new HttpError(401, 'bad-signature', 'no invitation on this machine matches the signature')
     this.claimNonce(signed.deviceId, signed.nonce)
 
-    const existing = this.store.peer(parsed.device.deviceId)
-    const peer: PeerRecord = {
-      deviceId: parsed.device.deviceId,
-      name: parsed.device.name.slice(0, 64),
-      host: remote !== '' ? remote : existing?.host ?? '127.0.0.1',
-      port: parsed.device.port,
-      key: matched.key,
-      addedAt: existing?.addedAt ?? now,
-      pairedAt: existing?.pairedAt ?? now,
-      lastSeenAt: now,
-    }
-    await this.store.upsertPeer(peer)
-    if (matched.invite !== undefined) await this.store.markInviteUsed(matched.invite, parsed.device.deviceId, now)
-    this.logger(`[smoothly-chat] paired with ${peer.name} (${peer.deviceId.slice(0, 8)}…) at ${peer.host}:${String(peer.port)}`)
-    const reply: HelloResponse & { paired: true } = {
-      ok: true,
+    const replyBase = {
+      ok: true as const,
       v: PROTOCOL_VERSION,
       self: { ...this.store.self, port: this.boundPort },
       at: now,
-      paired: true,
     }
-    sendJson(res, 200, reply)
+
+    const existing = this.store.peer(parsed.device.deviceId)
+    if (existing?.pairedAt !== undefined) {
+      // Already paired: idempotent confirmation so a lost reply heals itself.
+      await this.store.patchPeer(parsed.device.deviceId, {
+        name: parsed.device.name.slice(0, 64),
+        port: parsed.device.port,
+        lastSeenAt: now,
+        ...(remote === '' ? {} : { host: remote }),
+      })
+      sendJson(res, 200, { ...replyBase, paired: true })
+      return
+    }
+
+    const deniedAt = this.store.deniedAt(parsed.device.deviceId, now)
+    if (deniedAt !== undefined) {
+      throw new HttpError(403, 'pair-denied', 'this machine declined the pairing request')
+    }
+
+    await this.store.upsertPairRequest({
+      deviceId: parsed.device.deviceId,
+      name: parsed.device.name.slice(0, 64),
+      host: remote !== '' ? remote : existing?.host ?? '',
+      port: parsed.device.port,
+      key: matched.key,
+      requestedAt: existing?.addedAt ?? now,
+      lastSeenAt: now,
+    })
+    this.logger(`[smoothly-chat] pairing request from ${parsed.device.name} (${parsed.device.deviceId.slice(0, 8)}…) awaits approval`)
+    sendJson(res, 200, { ...replyBase, pending: true })
   }
 
   /** Authenticated identity probe: presence plus address self-heal. */

@@ -24,6 +24,7 @@ import type {
   ConfigFile,
   FileMeta,
   InviteRecord,
+  PairRequestRecord,
   PeerRecord,
   ThreadMessage,
   ThreadRecord,
@@ -201,6 +202,44 @@ export class Store {
       this.config = { ...this.config, peers: this.config.peers.filter(peer => peer.deviceId !== deviceId) }
       await this.saveConfig()
     })
+  }
+
+  /** Pairing requests waiting for approval, newest last. */
+  pairRequests(): PairRequestRecord[] {
+    return this.config.requests.map(request => ({ ...request }))
+  }
+
+  /** Insert or refresh a pending pairing request. */
+  async upsertPairRequest(request: PairRequestRecord): Promise<void> {
+    await this.mutex.run(async () => {
+      const others = this.config.requests.filter(candidate => candidate.deviceId !== request.deviceId)
+      this.config = { ...this.config, requests: [...others, request] }
+      await this.saveConfig()
+    })
+  }
+
+  /** Remove one pending request (approved or denied). */
+  async removePairRequest(deviceId: string): Promise<void> {
+    await this.mutex.run(async () => {
+      this.config = { ...this.config, requests: this.config.requests.filter(candidate => candidate.deviceId !== deviceId) }
+      await this.saveConfig()
+    })
+  }
+
+  /** Remember a refusal for one hour so the requesting machine learns. */
+  async noteDenial(deviceId: string, now: number): Promise<void> {
+    await this.mutex.run(async () => {
+      const denied = { ...this.config.denied }
+      denied[deviceId] = now
+      this.config = { ...this.config, denied }
+      await this.saveConfig()
+    })
+  }
+
+  /** Whether this machine refused pairing with `deviceId` recently. */
+  deniedAt(deviceId: string, now: number): number | undefined {
+    const at = this.config.denied[deviceId]
+    return at !== undefined && now - at < 60 * 60 * 1000 ? at : undefined
   }
 
   /** Mint a new invitation. */
@@ -446,7 +485,12 @@ async function loadConfig(root: string): Promise<ConfigFile> {
     if (parsed.version !== 1 || typeof parsed.deviceId !== 'string' || !Array.isArray(parsed.peers)) {
       throw new Error('config.json has an unsupported shape')
     }
-    return { ...parsed, invites: Array.isArray(parsed.invites) ? parsed.invites : [] }
+    return {
+      ...parsed,
+      invites: Array.isArray(parsed.invites) ? parsed.invites : [],
+      requests: Array.isArray(parsed.requests) ? parsed.requests : [],
+      denied: typeof parsed.denied === 'object' && parsed.denied !== null ? parsed.denied : {},
+    }
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code
     if (code !== 'ENOENT') throw error
@@ -456,6 +500,8 @@ async function loadConfig(root: string): Promise<ConfigFile> {
       name: defaultDeviceName(),
       peers: [],
       invites: [],
+      requests: [],
+      denied: {},
     }
     await writeFile(path, JSON.stringify(config, null, 2), { mode: 0o600 })
     await chmod(path, 0o600)

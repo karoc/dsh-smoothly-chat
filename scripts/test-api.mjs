@@ -84,13 +84,26 @@ await scenario('invite → pair over the API creates a working pair on both side
     assert.equal(invite.status, 200)
     assert.match(invite.body.string, /^dsh-peer:\/\//u)
 
-    const paired = await call(b, '/pair', {
+    const requested = await call(b, '/pair', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ invitation: invite.body.string }),
     })
-    assert.equal(paired.status, 200)
-    assert.equal(paired.body.peer.pairedAt !== undefined, true)
+    assert.equal(requested.status, 200)
+    assert.equal(requested.body.peer.pairedAt, undefined, 'a request does not pair by itself')
+
+    const pendingState = await call(a, '/state')
+    assert.equal(pendingState.body.requests.length, 1, 'A sees the request')
+    assert.equal(pendingState.body.requests[0].deviceId, b.node.self.deviceId)
+    assert.equal(pendingState.body.requests[0].key, undefined, 'request rows never carry the key')
+
+    const approved = await call(a, '/requests/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: b.node.self.deviceId }),
+    })
+    assert.equal(approved.status, 200)
+    await b.node.retryPendingPairs()
 
     const stateA = await call(a, '/state')
     const stateB = await call(b, '/state')
@@ -114,6 +127,12 @@ await scenario('send → thread → unread → read works over the API', async (
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ invitation: invite.body.string }),
     })
+    await call(a, '/requests/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: b.node.self.deviceId }),
+    })
+    await b.node.retryPendingPairs()
     const sent = await call(a, '/send', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -151,6 +170,12 @@ await scenario('upload delivers the exact bytes and the file route serves them b
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ invitation: invite.body.string }),
     })
+    await call(a, '/requests/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: b.node.self.deviceId }),
+    })
+    await b.node.retryPendingPairs()
     const bytes = randomBytes(256 * 1024 + 3)
     const uploaded = await call(a, `/upload?peer=${encodeURIComponent(b.node.self.deviceId)}&name=${encodeURIComponent('报告.bin')}`, {
       method: 'POST',
@@ -187,6 +212,12 @@ await scenario('the event stream announces an inbound message', async () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ invitation: invite.body.string }),
     })
+    await call(a, '/requests/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: b.node.self.deviceId }),
+    })
+    await b.node.retryPendingPairs()
 
     const controller = new AbortController()
     const response = await fetch(`http://127.0.0.1:${b.port}/smoothly-chat/api/events`, { signal: controller.signal })

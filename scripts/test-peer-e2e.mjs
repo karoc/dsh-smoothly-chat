@@ -93,14 +93,35 @@ async function post(node, pathname, body, headers) {
 
 // ── scenarios ────────────────────────────────────────────────────────────
 
+/** Request pairing from B, then approve it on A (the human step). */
+async function pairNodes(a, b) {
+  const invitation = await a.invite()
+  const pending = await b.pair(invitation.string)
+  assert.equal(pending.pairedAt, undefined, 'B must stay unpaired until A approves')
+  const request = a.pairRequests().find(candidate => candidate.deviceId === b.self.deviceId)
+  assert.ok(request, 'A must hold a pending pairing request')
+  await a.approveRequest(b.self.deviceId)
+  await b.retryPendingPairs()
+  assert.equal(b.store.peer(a.self.deviceId)?.pairedAt !== undefined, true, 'B learns the approval on retry')
+  return invitation
+}
+
+
 await scenario('pairing is mutual and both directions work', async () => {
   const a = await makeNode('pair-a')
   const b = await makeNode('pair-b')
   try {
     const invitation = await a.invite()
     assert.match(invitation.string, /^dsh-peer:\/\//u)
-    const paired = await b.pair(invitation.string)
-    assert.equal(paired.pairedAt !== undefined, true, 'peer record on B must be confirmed')
+    const requested = await b.pair(invitation.string)
+    assert.equal(requested.pairedAt, undefined, 'the request alone must not pair the machines')
+    const pending = a.pairRequests()
+    assert.equal(pending.length, 1, 'the invitation holder creates a request, not a pair')
+    await a.approveRequest(b.self.deviceId)
+    const paired = (await b.store.peer(a.self.deviceId))
+    assert.equal(paired?.pairedAt, undefined, 'B still waits until its retry observes the approval')
+    await b.retryPendingPairs()
+    assert.equal(b.store.peer(a.self.deviceId)?.pairedAt !== undefined, true, 'retry mirrors the approval')
     const back = a.store.peer(b.self.deviceId)
     assert.equal(back?.pairedAt !== undefined, true, 'peer record on A must be confirmed')
     assert.equal(back?.key, paired.key, 'both sides share the same per-pair key')
@@ -126,7 +147,7 @@ await scenario('delivery status and unread counts follow the messages', async ()
   const a = await makeNode('status-a')
   const b = await makeNode('status-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     await a.sendText([b.self.deviceId], 'unread me')
     await a.flush()
     const outbound = (await a.store.readThread(b.self.deviceId)).at(-1)
@@ -144,7 +165,7 @@ await scenario('a redelivered message id is stored exactly once', async () => {
   const a = await makeNode('dup-a')
   const b = await makeNode('dup-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     const body = JSON.stringify({
       v: 1, id: 'fixed-id-1', from: { deviceId: a.self.deviceId, name: 'dup-a' },
       to: { deviceId: b.self.deviceId }, at: Date.now(), kind: 'text', text: 'once',
@@ -170,7 +191,7 @@ await scenario('files arrive byte-identical with their digest verified', async (
   try {
     const bytes = randomBytes(1024 * 1024 + 17)
     await writeFile(source, bytes)
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     await a.sendFile([b.self.deviceId], source, 'payload.bin')
     await a.flush()
     const message = (await b.store.readThread(a.self.deviceId)).at(-1)
@@ -190,8 +211,8 @@ await scenario('broadcast is N independent messages sharing one batch id', async
   const b = await makeNode('cast-b')
   const c = await makeNode('cast-c')
   try {
-    await b.pair((await a.invite()).string)
-    await c.pair((await a.invite()).string)
+    await pairNodes(a, b)
+    await pairNodes(a, c)
     const sent = await a.sendText([b.self.deviceId, c.self.deviceId], 'to both')
     assert.equal(sent.messages.length, 2)
     assert.equal(new Set(sent.messages.map(message => message.id)).size, 2, 'each peer gets its own message id')
@@ -210,7 +231,7 @@ await scenario('unsigned and wrongly signed requests are rejected', async () => 
   const a = await makeNode('sig-a')
   const b = await makeNode('sig-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     const key = (await a.store.peer(b.self.deviceId)).key
     const body = JSON.stringify({
       v: 1, id: 'sig-1', from: { deviceId: a.self.deviceId, name: 'sig-a' },
@@ -233,7 +254,7 @@ await scenario('a replayed nonce and a stale timestamp are rejected', async () =
   const a = await makeNode('replay-a')
   const b = await makeNode('replay-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     const key = (await a.store.peer(b.self.deviceId)).key
     const body = JSON.stringify({
       v: 1, id: 'replay-1', from: { deviceId: a.self.deviceId, name: 'replay-a' },
@@ -262,7 +283,7 @@ await scenario('an oversized text body is refused with 413', async () => {
   const a = await makeNode('big-a')
   const b = await makeNode('big-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     const key = (await a.store.peer(b.self.deviceId)).key
     const body = JSON.stringify({
       v: 1, id: 'big-1', from: { deviceId: a.self.deviceId, name: 'big-a' },
@@ -280,7 +301,7 @@ await scenario('a traversal file name cannot escape the message directory', asyn
   const a = await makeNode('trav-a')
   const b = await makeNode('trav-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     const key = (await a.store.peer(b.self.deviceId)).key
     const bytes = Buffer.from('payload')
     const digest = sha256Hex(bytes)
@@ -330,7 +351,7 @@ await scenario('an offline peer queues the message and receives it on return', a
   const bPort = b.port
   const bRoot = b.store.root
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     await b.stop()
     await a.sendText([b.self.deviceId], 'while you were away')
     await a.flush()
@@ -355,11 +376,28 @@ await scenario('an offline peer queues the message and receives it on return', a
   }
 })
 
+await scenario('a declined request is reported to the requester', async () => {
+  const a = await makeNode('deny-a')
+  const b = await makeNode('deny-b')
+  try {
+    await b.pair((await a.invite()).string)
+    await a.denyRequest(b.self.deviceId)
+    assert.equal(a.pairRequests().length, 0, 'the request is gone after the decision')
+    await b.retryPendingPairs()
+    const peer = b.store.peer(a.self.deviceId)
+    assert.equal(peer?.pairDenied, true, 'B stops asking after a refusal')
+    assert.match(peer?.lastError ?? '', /403/u)
+  } finally {
+    await closeNode(a)
+    await closeNode(b)
+  }
+})
+
 await scenario('unpairing removes the pair on both sides', async () => {
   const a = await makeNode('unpair-a')
   const b = await makeNode('unpair-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     await a.unpair(b.self.deviceId)
     assert.equal(a.store.peer(b.self.deviceId), undefined)
     assert.equal(b.store.peer(a.self.deviceId), undefined, 'the remote side dropped the pair too')
@@ -398,7 +436,7 @@ await scenario('a peer row tracks the address a verified request came from', asy
   const a = await makeNode('heal-a')
   const b = await makeNode('heal-b')
   try {
-    await b.pair((await a.invite()).string)
+    await pairNodes(a, b)
     // Simulate a DHCP change by pointing A's record at a dead address; B's
     // verified request must heal it back, because the signature proves identity.
     await a.store.patchPeer(b.self.deviceId, { host: '127.0.0.2' })

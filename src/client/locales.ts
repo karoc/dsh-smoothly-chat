@@ -54,6 +54,13 @@ export const zh = {
   pairFailed: '配对失败：{message}',
   actionFailed: '操作失败：{message}',
   noPeersForBroadcast: '还没有可发送的对端',
+  requestsTitle: '{count} 个配对请求',
+  requestLine: '{name} · {address}:{port}',
+  approve: '接受',
+  deny: '拒绝',
+  pairPending: '等待对方确认',
+  pairRequestSent: '配对请求已发送，等待对方接受。',
+  noticeDismiss: '知道了',
 } as const
 
 /** Translation key of this namespace. */
@@ -107,4 +114,11 @@ export const en: Record<ChatKey, string> = {
   pairFailed: 'Pairing failed: {message}',
   actionFailed: 'Action failed: {message}',
   noPeersForBroadcast: 'No peer to send to yet',
+  requestsTitle: '{count} pairing request(s)',
+  requestLine: '{name} · {address}:{port}',
+  approve: 'Approve',
+  deny: 'Decline',
+  pairPending: 'waiting for approval',
+  pairRequestSent: 'Pairing request sent — waiting for the other machine to approve.',
+  noticeDismiss: 'Got it',
 }

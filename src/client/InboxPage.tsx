@@ -8,7 +8,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
-  IconMailUnreadOutlineRegular,
   IconPaperclipOutlineRegular,
   IconPlusOutlineRegular,
   IconRefreshOutlineRegular,
@@ -16,8 +15,11 @@ import {
   IconTrashOutlineRegular,
   IconWarningTriangleOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { EnvelopeIcon } from './EnvelopeIcon.tsx'
 import {
+  approveRequest,
   createInvite,
+  denyRequest,
   downloadFile,
   formatSize,
   formatTime,
@@ -26,6 +28,7 @@ import {
   selectPeer,
   sendFile,
   sendText,
+  setPanelVisible,
   unpairPeer,
   useInbox,
   type PeerView,
@@ -63,10 +66,18 @@ export function InboxPage(props: InboxPageProps) {
   const [copied, setCopied] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [confirmUnpair, setConfirmUnpair] = useState(false)
+  const [requestsOpen, setRequestsOpen] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const threadRef = useRef<HTMLDivElement | null>(null)
 
+  useEffect(() => {
+    setPanelVisible(true)
+    return () => { setPanelVisible(false) }
+  }, [])
+
   const peers = state?.peers ?? []
+  const requests = state?.requests ?? []
   const peer = peers.find(candidate => candidate.deviceId === selected)
   const messages = selected === null ? [] : threads[selected] ?? []
 
@@ -114,9 +125,10 @@ export function InboxPage(props: InboxPageProps) {
     const value = invitation.trim()
     if (value === '') return
     void run(async () => {
-      await pairWith(value)
+      const paired = await pairWith(value)
       setInvitation('')
       setPanel('none')
+      if (paired !== undefined && paired.pairedAt === undefined) setNotice(tr('pairRequestSent'))
     })
   }
 
@@ -147,7 +159,8 @@ export function InboxPage(props: InboxPageProps) {
   const preview = (candidate: PeerView): string => {
     const thread = threads[candidate.deviceId] ?? []
     const last = thread.at(-1)
-    if (last === undefined) return candidate.pairedAt === undefined ? tr('pairing') : candidate.host
+    if (candidate.pairedAt === undefined) return tr('pairPending')
+    if (last === undefined) return candidate.host
     if (last.kind === 'file') return `📎 ${last.file?.name ?? tr('file')}`
     return last.text ?? ''
   }
@@ -229,6 +242,31 @@ export function InboxPage(props: InboxPageProps) {
           </div>
         )}
 
+        {requests.length > 0 && (
+          <div className="dsc-requests">
+            <button type="button" className="dsc-requests-head" onClick={() => { setRequestsOpen(open => !open) }}>
+              <span className="dsc-badge">{requests.length}</span>
+              <span>{tr('requestsTitle', { count: requests.length })}</span>
+              <span className="dsc-spacer" />
+              <span className="dsc-hint">{requestsOpen ? '▾' : '▸'}</span>
+            </button>
+            {requestsOpen && requests.map(request => (
+              <div key={request.deviceId} className="dsc-request">
+                <div className="dsc-peer-main">
+                  <div className="dsc-peer-name">{request.name !== '' ? request.name : request.deviceId.slice(0, 8)}</div>
+                  <div className="dsc-peer-preview">{tr('requestLine', { name: '', address: request.host, port: request.port }).replace(/^ · /u, '')}</div>
+                </div>
+                <button type="button" className="dsc-btn primary" disabled={busy} onClick={() => { void run(async () => { await approveRequest(request.deviceId) }) }}>
+                  {tr('approve')}
+                </button>
+                <button type="button" className="dsc-btn" disabled={busy} onClick={() => { void run(async () => { await denyRequest(request.deviceId) }) }}>
+                  {tr('deny')}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="dsc-peer-list">
           {peers.map(candidate => (
             <div
@@ -268,13 +306,19 @@ export function InboxPage(props: InboxPageProps) {
             <IconWarningTriangleOutlineRegular size={13} /> {tr('lanWarn')}
           </div>
         )}
+        {notice !== null && (
+          <div className="dsc-banner">
+            {notice}
+            <button type="button" className="dsc-file-action" onClick={() => { setNotice(null) }}>{tr('noticeDismiss')}</button>
+          </div>
+        )}
         {(actionError ?? error) !== undefined && (actionError ?? error) !== null && (
           <div className="dsc-banner error">{tr('actionFailed', { message: actionError ?? error ?? '' })}</div>
         )}
 
         {peer === undefined ? (
           <div className="dsc-empty">
-            <IconMailUnreadOutlineRegular size={22} />
+            <EnvelopeIcon size={22} />
             <strong>{tr('emptyThread')}</strong>
             <span>{tr('emptyThreadHint')}</span>
           </div>

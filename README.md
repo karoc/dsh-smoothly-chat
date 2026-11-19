@@ -12,6 +12,9 @@ a panel — never in a conversation, never in a prompt, never in a token bill.
   thread per peer).
 - **Broadcast**: send to every peer at once — implemented as N independent
   messages sharing a batch id, so one dead peer cannot hold up the others.
+- **Unread that behaves**: the dot and per-peer counts clear themselves while
+  the thread is actually on screen; a hidden window or another panel keeps
+  accumulating.
 - **Never touches a session**: no conversation is created, appended to, or
   resumed; the model never sees this traffic.
 
@@ -40,14 +43,19 @@ to the profile's `package.json` dependencies and `dsh-smoothly-chat` to its
 ## Pairing (once per machine pair)
 
 1. Machine A: **Add peer → Create invitation** → copy the `dsh-peer://…` string.
-2. Machine B: **Add peer → paste** → Pair.
+2. Machine B: **Add peer → paste** → Send request. B stays *waiting for approval*.
+3. Machine A: the panel shows a compact **pairing request** row (unread dot on
+   the sidebar icon); expand it and choose **Approve** — only then are the two
+   machines paired and able to exchange anything.
 
-B signs its confirmation with the invitation key; A records B as soon as that
-signature verifies, so both directions work immediately after the paste. No
-manual accept step on A (holding the key *is* the credential), no second paste.
-Invitations expire after 24 hours. Unpairing drops the pair here immediately and
-tells the other side; if that machine is offline it learns the next time it
-tries to send (the request is refused and the message is marked failed).
+Holding an invitation only permits *asking*: B proves it may request by signing
+with the invitation key, and A's owner decides. Nothing is auto-accepted, and a
+declined request is reported back to B (which stops asking). Invitations expire
+after 24 hours.
+
+Unpairing drops the pair here immediately and tells the other side; if that
+machine is offline it learns the next time it tries to send (the request is
+refused and the message is marked failed).
 
 ## Network
 

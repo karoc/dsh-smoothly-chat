@@ -128,7 +128,17 @@ try {
   })
   await node.start()
   await node.pair(invite.string)
-  note('script node paired with the live plugin')
+  // The plugin owner approves through the panel API — the same call the
+  // request banner makes when the user clicks Approve.
+  await page.evaluate(async (deviceId) => {
+    await fetch('/smoothly-chat/api/requests/approve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId }),
+    })
+  }, node.self.deviceId)
+  await node.retryPendingPairs()
+  note('script node paired with the live plugin after approval')
 
   // ── script → plugin: text ────────────────────────────────────────────────
   const marker = `hello-${randomBytes(4).toString('hex')}`

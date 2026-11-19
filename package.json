@@ -40,14 +40,15 @@
   "scripts": {
     "bundle": "tsdown --config ./tsdown.config.ts && node scripts/stamp-build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs",
+    "test": "node scripts/check-icons.mjs && node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs",
     "release:check": "node scripts/release-check.mjs",
     "test:controls": "node scripts/test-negative-controls.mjs",
-    "verify:all": "node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs && npx tsc --noEmit && node scripts/test-negative-controls.mjs",
+    "verify:all": "node scripts/check-icons.mjs && node scripts/test-peer-e2e.mjs && node scripts/test-api.mjs && node scripts/test-host-adapter.mjs && npx tsc --noEmit && node scripts/test-negative-controls.mjs",
     "verify:gui": "node scripts/verify-gui.mjs",
     "verify:gui:live": "node scripts/verify-gui-live.mjs",
     "verify:publish": "node scripts/post-publish-check.mjs --strict --wait 300",
-    "postpublish": "node scripts/post-publish-check.mjs --wait 300"
+    "postpublish": "node scripts/post-publish-check.mjs --wait 300",
+    "check:icons": "node scripts/check-icons.mjs"
   },
   "engines": {
     "node": ">=18",
