@@ -66,6 +66,9 @@ export const zh = {
   updateCurrent: '已是最新（{version} @ {commit}）',
   updateAvailable: '有新版本：{commit}（{date}）—— 在 Plugins 页更新插件',
   updateFailed: '检查失败：{message}',
+  timeNow: '刚刚',
+  requestAddress: '{address}:{port}',
+  uploadProgress: '上传中 {percent}%',
 } as const
 
 /** Translation key of this namespace. */
@@ -131,4 +134,7 @@ export const en: Record<ChatKey, string> = {
   updateCurrent: 'Up to date ({version} @ {commit})',
   updateAvailable: 'Update available: {commit} ({date}) — update the plugin from the Plugins page',
   updateFailed: 'Update check failed: {message}',
+  timeNow: 'now',
+  requestAddress: '{address}:{port}',
+  uploadProgress: 'Uploading {percent}%',
 }

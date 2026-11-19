@@ -36,6 +36,7 @@ export interface LocalAddress {
 /** Events the host half forwards to the UI (and SSE subscribers). */
 export type ChatEvent =
   | { type: 'inbox'; peerId: string; messageId: string }
+  | { type: 'progress'; peerId: string; messageId: string; sent: number; total: number }
   | { type: 'status'; peerId: string; messageId: string; status: 'sent' | 'failed'; error?: string }
   | { type: 'peers' }
 
@@ -107,6 +108,9 @@ export class ChatNode {
       ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
       logger: this.logger,
       now: this.now,
+      onProgress: (peerId, messageId, sent, total) => {
+        this.emit({ type: 'progress', peerId, messageId, sent, total })
+      },
       onStatus: (peerId, messageId, status, error) => {
         this.emit(error === undefined
           ? { type: 'status', peerId, messageId, status }

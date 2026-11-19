@@ -102,6 +102,24 @@ files/<msgId>/<name>  received file bodies
 outbox/<msgId>.json   pending deliveries (survive restarts)
 ```
 
+## Files, honestly
+
+- Sending from the panel **uploads a copy to the local host first** (staged under
+  `tmp/`), then the host streams that copy to the peer. The sender's original
+  file is not touched or needed afterwards.
+- The receiver writes its own copy at `files/<msgId>/<name>` **when the message
+  arrives**, and its Download button serves *that local copy*. It never pulls
+  from the sender, so deleting or moving the original after a successful send
+  changes nothing on the other side.
+- The staged copy is deleted once delivery succeeds (and on a permanent
+  failure). A message that never completes shows `failed`; the receiver keeps a
+  partial file only if the transfer was interrupted — partials are discarded and
+  never listed.
+- Both halves show a progress bar: the browser→host upload, then the host→peer
+  stream (reported over SSE).
+- The panel follows the DSH language setting: Chinese and English dictionaries;
+  any other language falls back to English.
+
 ## Delivery semantics
 
 - Outbound messages are persisted before the first attempt; a restart resumes

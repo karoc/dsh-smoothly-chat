@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "hash": "420aaea2d80ab70f22390af91547ddfc3fa14408711c57985fdfed5ad12fcee8",
+  "hash": "10f99bb8ab87fb985576ebbc61dc395e3506ce7b846144bafd4bcc007762d138",
   "files": [
     "src/client/EnvelopeIcon.tsx",
     "src/client/InboxIcon.tsx",
@@ -19,10 +19,10 @@
     "src/core/types.ts",
     "src/index.ts"
   ],
-  "builtAt": "2026-11-19T01:23:10.239Z",
-  "commit": "835ddb82910730c75d68f7d3798e96e38ed20f8a",
+  "builtAt": "2026-11-19T01:58:54.482Z",
+  "commit": "33c6c520252f0d0a0e4752ca5ece8d1034e23931",
   "package": {
     "name": "dsh-smoothly-chat",
-    "version": "0.1.0"
+    "version": "0.1.1"
   }
 }

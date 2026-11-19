@@ -423,6 +423,29 @@ await scenario('a declined request is reported to the requester', async () => {
   }
 })
 
+await scenario('file delivery reports throttled progress', async () => {
+  const a = await makeNode('prog-a')
+  const b = await makeNode('prog-b')
+  const source = join(await freshRoot('prog-src'), 'big.bin')
+  const events = []
+  a.subscribe(event => { if (event.type === 'progress') events.push(event) })
+  try {
+    const bytes = randomBytes(512 * 1024)
+    await writeFile(source, bytes)
+    await pairNodes(a, b)
+    await a.sendFile([b.self.deviceId], source, 'big.bin')
+    await a.flush()
+    assert.ok(events.length > 0, 'at least one progress event must be emitted')
+    const last = events.at(-1)
+    assert.equal(last.total, bytes.length)
+    assert.equal(last.sent, bytes.length, 'the final event reports the whole file')
+    assert.equal((await b.store.readThread(a.self.deviceId)).at(-1).file.sha256, sha256Hex(bytes))
+  } finally {
+    await closeNode(a)
+    await closeNode(b)
+  }
+})
+
 await scenario('unpairing removes the pair on both sides', async () => {
   const a = await makeNode('unpair-a')
   const b = await makeNode('unpair-b')

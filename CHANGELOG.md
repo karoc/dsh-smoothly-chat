@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.1.1 — unreleased
+
+- **Transfer progress**: the composer shows the browser→host upload percentage
+  (XMLHttpRequest upload events) and each outbound file card shows a thin bar for
+  the host→peer stream, reported over SSE and throttled to ~150 ms.
+- **Honest staged copies**: a failed permanent delivery now deletes the staged
+  upload copy as well as the outbox record; a successful one already did.
+- **Localized UI details**: relative times, the request address line and upload
+  copy now come from the dictionaries — the panel follows the DSH language
+  setting (zh/en, other languages fall back to English).
+- **README**: documents the real file semantics — the receiver keeps its own
+  copy, so deleting the sender's original after a successful send changes
+  nothing; partial transfers are discarded.
+
 ## v0.1.0 — unreleased
 
 First release: the machine-level inbox for DSH instances on one LAN.

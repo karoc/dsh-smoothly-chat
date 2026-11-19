@@ -8,8 +8,10 @@
  * surface as `failed`; transport failures keep retrying with capped backoff.
  */
 
+import type { Readable } from 'node:stream'
 import { createReadStream } from 'node:fs'
 import { rm } from 'node:fs/promises'
+import { Transform } from 'node:stream'
 import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import {
@@ -32,6 +34,8 @@ export interface OutboxOptions {
   now?: () => number
   /** Called after a status transition so the UI can refresh. */
   onStatus?: (peerId: string, id: string, status: 'sent' | 'failed', error?: string) => void
+  /** Called while a file streams to the peer (throttled) so the panel can draw a bar. */
+  onProgress?: (peerId: string, id: string, sent: number, total: number) => void
 }
 
 /** What one delivery attempt concluded. */
@@ -47,6 +51,7 @@ export class Outbox {
   private readonly logger: (line: string) => void
   private readonly now: () => number
   private readonly onStatus: OutboxOptions['onStatus']
+  private readonly onProgress: OutboxOptions['onProgress']
   private timer: NodeJS.Timeout | undefined
   private inflight: Promise<void> | undefined
   private running = false
@@ -58,6 +63,7 @@ export class Outbox {
     this.logger = options.logger ?? (() => {})
     this.now = options.now ?? (() => Date.now())
     this.onStatus = options.onStatus
+    this.onProgress = options.onProgress
   }
 
   /** Queue one text message for one peer and return its thread row. */
@@ -185,6 +191,9 @@ export class Outbox {
             await this.store.appendStatus(candidate.peerId, candidate.id, 'failed', this.now(), outcome.error)
             await this.store.patchPeer(candidate.peerId, { lastError: outcome.error })
             await this.store.deleteOutbox(candidate.id)
+            if (candidate.kind === 'file' && candidate.file !== undefined && this.store.isStaged(candidate.file.path)) {
+              await rm(candidate.file.path, { force: true })
+            }
             this.onStatus?.(candidate.peerId, candidate.id, 'failed', outcome.error)
             this.logger(`[smoothly-chat] delivery failed permanently: ${outcome.error}`)
             continue
@@ -264,11 +273,28 @@ export class Outbox {
         [FILE_SIZE_HEADER]: String(record.file.size),
         [FILE_SHA_HEADER]: record.file.sha256,
       },
-      body: createReadStream(record.file.path) as unknown as BodyInit,
+      body: this.progressStream(record, record.file.size) as unknown as BodyInit,
       duplex: 'half',
       signal: AbortSignal.timeout(120_000),
     } as RequestInit)
     return this.classify(response)
+  }
+
+  /** Count bytes on their way to the peer and report a throttled ratio. */
+  private progressStream(record: OutboxRecord, total: number): Readable {
+    let sent = 0
+    let lastAt = 0
+    return createReadStream(record.file?.path ?? '').pipe(new Transform({
+      transform: (chunk: Buffer, _encoding, callback) => {
+        sent += chunk.length
+        const now = this.now()
+        if (sent === total || now - lastAt > 150) {
+          lastAt = now
+          this.onProgress?.(record.peerId, record.id, sent, total)
+        }
+        callback(null, chunk)
+      },
+    }))
   }
 
   private async classify(response: Response): Promise<Outcome> {

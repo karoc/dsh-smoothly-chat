@@ -214,6 +214,29 @@ const CSS = `
 }
 .dsc-status { margin-top: 3px; font-size: 10px; color: var(--dsw-alias-label-tertiary); }
 .dsc-status.failed { color: var(--dsw-alias-state-error-primary); }
+.dsc-progress {
+  display: inline-block;
+  width: 96px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--dsw-alias-border-l2);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.dsc-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--dsw-alias-brand-primary);
+  transition: width 120ms linear;
+}
+.dsc-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dsc-upload .dsc-progress { flex: 1; }
+.dsc-transfer { display: inline-flex; align-items: center; }
+.dsc-transfer .dsc-progress { width: 64px; }
 .dsc-composer {
   border-top: 1px solid var(--dsw-alias-border-l2);
   padding: 10px 14px;

@@ -87,6 +87,8 @@ export interface InboxSnapshot {
   selected: string | null
   loading: boolean
   error: string | undefined
+  /** Live delivery progress, keyed by message id. */
+  progress: Record<string, { sent: number; total: number }>
 }
 
 let snapshot: InboxSnapshot = {
@@ -95,6 +97,7 @@ let snapshot: InboxSnapshot = {
   selected: null,
   loading: true,
   error: undefined,
+  progress: {},
 }
 const listeners = new Set<() => void>()
 let inflight: Promise<void> | undefined
@@ -247,19 +250,41 @@ export async function sendText(text: string, broadcast: boolean): Promise<void> 
   await refresh()
 }
 
+/**
+ * Upload one file per target peer. `fetch` cannot report upload progress, so
+ * this uses XMLHttpRequest; the caller draws a bar from the callback and the
+ * host reports the peer-delivery half over SSE.
+ */
+function uploadTo(peerId: string, file: File, onProgress?: (sent: number, total: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${API}/upload?peer=${encodeURIComponent(peerId)}&name=${encodeURIComponent(file.name)}`)
+    xhr.setRequestHeader('content-type', 'application/octet-stream')
+    xhr.upload.onprogress = (event: ProgressEvent) => {
+      if (event.lengthComputable) onProgress?.(event.loaded, event.total)
+    }
+    xhr.onload = () => {
+      let body: { ok?: boolean; error?: unknown } = {}
+      try {
+        body = JSON.parse(xhr.responseText) as { ok?: boolean; error?: unknown }
+      } catch {
+        // Non-JSON answer: the status line below is the whole story.
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && body.ok !== false) resolve()
+      else reject(new Error(typeof body.error === 'string' ? body.error : `HTTP ${String(xhr.status)}`))
+    }
+    xhr.onerror = () => { reject(new Error('upload failed')) }
+    xhr.send(file)
+  })
+}
+
 /** Upload one file to the selected peer, or to every peer when `broadcast` is set. */
-export async function sendFile(file: File, broadcast: boolean): Promise<void> {
+export async function sendFile(file: File, broadcast: boolean, onProgress?: (sent: number, total: number) => void): Promise<void> {
   const target = broadcast
     ? (snapshot.state?.peers ?? []).filter(peer => peer.pairedAt !== undefined).map(peer => peer.deviceId)
     : snapshot.selected === null ? [] : [snapshot.selected]
   if (target.length === 0) throw new Error('no peer selected')
-  for (const peerId of target) {
-    await request(`/upload?peer=${encodeURIComponent(peerId)}&name=${encodeURIComponent(file.name)}`, {
-      method: 'POST',
-      body: file,
-      headers: { 'content-type': 'application/octet-stream' },
-    })
-  }
+  for (const peerId of target) await uploadTo(peerId, file, onProgress)
   await refresh()
 }
 
@@ -342,7 +367,21 @@ export function startClient(): void {
     const source = new EventSource(`${API}/events`)
     source.onmessage = (event: MessageEvent<string>) => {
       try {
-        const data = JSON.parse(event.data) as { type?: string }
+        const data = JSON.parse(event.data) as { type?: string; messageId?: string; sent?: number; total?: number }
+        if (data.type === 'progress' && typeof data.messageId === 'string') {
+          publish({
+            progress: {
+              ...snapshot.progress,
+              [data.messageId]: { sent: data.sent ?? 0, total: data.total ?? 0 },
+            },
+          })
+          return
+        }
+        if (data.type === 'status' && typeof data.messageId === 'string') {
+          const next = { ...snapshot.progress }
+          delete next[data.messageId]
+          publish({ progress: next })
+        }
         if (data.type !== 'ready') void refresh()
       } catch {
         // Ignore malformed frames; polling still covers freshness.
@@ -366,9 +405,9 @@ export function formatSize(bytes: number): string {
 }
 
 /** Short relative time for list rows and status lines. */
-export function formatTime(at: number, now = Date.now()): string {
+export function formatTime(at: number, now = Date.now(), nowLabel = 'now'): string {
   const delta = Math.max(0, now - at)
-  if (delta < 60_000) return 'now'
+  if (delta < 60_000) return nowLabel
   if (delta < 3_600_000) return `${String(Math.floor(delta / 60_000))}m`
   if (delta < 86_400_000) return `${String(Math.floor(delta / 3_600_000))}h`
   return new Date(at).toLocaleDateString()

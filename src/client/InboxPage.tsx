@@ -69,6 +69,7 @@ export function InboxPage(props: InboxPageProps) {
   const [confirmUnpair, setConfirmUnpair] = useState(false)
   const [requestsOpen, setRequestsOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [upload, setUpload] = useState<{ sent: number; total: number } | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const threadRef = useRef<HTMLDivElement | null>(null)
 
@@ -119,7 +120,14 @@ export function InboxPage(props: InboxPageProps) {
   const attach = (files: FileList | null): void => {
     const file = files?.[0]
     if (file === undefined) return
-    void run(async () => { await sendFile(file, broadcast) })
+    setUpload({ sent: 0, total: file.size })
+    void run(async () => {
+      try {
+        await sendFile(file, broadcast, (sent, total) => { setUpload({ sent, total }) })
+      } finally {
+        setUpload(null)
+      }
+    })
   }
 
   const submitPair = (): void => {
@@ -255,7 +263,7 @@ export function InboxPage(props: InboxPageProps) {
               <div key={request.deviceId} className="dsc-request">
                 <div className="dsc-peer-main">
                   <div className="dsc-peer-name">{request.name !== '' ? request.name : request.deviceId.slice(0, 8)}</div>
-                  <div className="dsc-peer-preview">{tr('requestLine', { name: '', address: request.host, port: request.port }).replace(/^ · /u, '')}</div>
+                  <div className="dsc-peer-preview">{tr('requestAddress', { address: request.host, port: request.port })}</div>
                 </div>
                 <button type="button" className="dsc-btn primary" disabled={busy} onClick={() => { void run(async () => { await approveRequest(request.deviceId) }) }}>
                   {tr('approve')}
@@ -378,12 +386,21 @@ export function InboxPage(props: InboxPageProps) {
                           {tr('download')}
                         </button>
                       )}
+                      {message.dir === 'out' && message.status === 'pending' && (() => {
+                        const live = snapshot.progress[message.id]
+                        const percent = live !== undefined && live.total > 0 ? Math.round((live.sent / live.total) * 100) : undefined
+                        return (
+                          <span className="dsc-transfer" title={percent === undefined ? undefined : `${String(percent)}%`}>
+                            <span className="dsc-progress"><span className="dsc-progress-fill" style={{ width: `${String(percent ?? 8)}%` }} /></span>
+                          </span>
+                        )
+                      })()}
                     </div>
                   ) : (
                     <div className="dsc-bubble">{message.text}</div>
                   )}
                   <div className={`dsc-status${message.status === 'failed' ? ' failed' : ''}`}>
-                    {formatTime(message.at)}
+                    {formatTime(message.at, Date.now(), tr('timeNow'))}
                     {message.dir === 'out' && ` · ${message.status === 'sent' ? tr('sent') : message.status === 'pending' ? tr('pending') : tr('failed')}`}
                   </div>
                 </div>
@@ -408,6 +425,14 @@ export function InboxPage(props: InboxPageProps) {
                   }
                 }}
               />
+              {upload !== null && (
+                <div className="dsc-upload">
+                  <span className="dsc-hint">
+                    {tr('uploadProgress', { percent: upload.total > 0 ? Math.round((upload.sent / upload.total) * 100) : 0 })}
+                  </span>
+                  <span className="dsc-progress"><span className="dsc-progress-fill" style={{ width: `${String(upload.total > 0 ? Math.round((upload.sent / upload.total) * 100) : 0)}%` }} /></span>
+                </div>
+              )}
               <div className="dsc-composer-row">
                 <input
                   ref={fileRef}
