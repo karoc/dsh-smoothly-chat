@@ -75,6 +75,8 @@ export const zh = {
   clipboardEmpty: '剪贴板里没有文件（文本不会被当作文件发送）',
   clipboardUnsupported: '当前浏览器不支持读取剪贴板文件，请用拖拽或选择文件',
   clipboardDenied: '没有剪贴板读取权限，请在浏览器提示中允许，或改用拖拽/选择文件',
+  clipboardFileUrlOnly: '浏览器只给了文件路径、没有给文件内容（macOS Finder 复制常见）。请直接在输入框按 Ctrl/Cmd+V，或拖拽文件。',
+  pasteFilesHint: '从剪贴板读取文件（Finder 复制的文件可能只支持 Ctrl/Cmd+V）',
 } as const
 
 /** Translation key of this namespace. */
@@ -149,4 +151,6 @@ export const en: Record<ChatKey, string> = {
   clipboardEmpty: 'The clipboard holds no file (text is never sent as a file)',
   clipboardUnsupported: 'This browser cannot read clipboard files — drag and drop or pick a file instead',
   clipboardDenied: 'Clipboard permission was denied; allow it or use drag and drop',
+  clipboardFileUrlOnly: 'The browser exposed a file path but not its bytes (common for Finder copies). Press Ctrl/Cmd+V in the composer, or drag the file in.',
+  pasteFilesHint: 'Read files from the clipboard (Finder copies may only work through Ctrl/Cmd+V)',
 }

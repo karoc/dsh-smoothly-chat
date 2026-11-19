@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.4 — unreleased
+
+- **Clipboard button tells the truth**: it distinguishes "no file in the
+  clipboard" from "the browser exposed only a `file://` path (typical for macOS
+  Finder copies)", where no page can read the bytes — the hint points at
+  Ctrl/Cmd+V or drag and drop instead of pretending nothing was copied. File
+  items declared as `kind: 'file'` are accepted even when their media type looks
+  textual (e.g. a copied `.txt`).
+
 ## v0.1.3 — unreleased
 
 - **Paste to send**: files and screenshots pasted into the composer (Ctrl/Cmd+V)

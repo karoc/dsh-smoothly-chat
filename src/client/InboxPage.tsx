@@ -159,16 +159,27 @@ export function InboxPage(props: InboxPageProps) {
         setNotice(tr('clipboardDenied'))
         return
       }
+      const textTypes = new Set(['text/plain', 'text/html', 'text/rtf', 'text/uri-list'])
       const files: File[] = []
+      let sawFileUrl = false
       for (const item of items) {
-        const type = item.types.find(candidate => candidate !== 'text/plain' && candidate !== 'text/html')
-        if (type === undefined) continue
-        const blob = await item.getType(type)
-        const extension = type.split('/')[1] ?? 'bin'
-        files.push(new File([blob], `clipboard-${String(Date.now())}.${extension}`, { type }))
+        // A file copied in Finder often arrives as a `text/uri-list` path —
+        // the browser withholds the bytes and no page can read them.
+        const declaredFile = (item as { kind?: string }).kind === 'file'
+        const candidate = item.types.find(type => !textTypes.has(type)) ?? (declaredFile ? item.types[0] : undefined)
+        if (candidate === undefined) {
+          if (item.types.includes('text/uri-list')) {
+            const uri = await item.getType('text/uri-list').then(blob => blob.text()).catch(() => '')
+            if (uri.trim().startsWith('file://')) sawFileUrl = true
+          }
+          continue
+        }
+        const blob = await item.getType(candidate)
+        const extension = candidate.split('/')[1] ?? 'bin'
+        files.push(new File([blob], `clipboard-${String(Date.now())}.${extension}`, { type: candidate }))
       }
       if (files.length === 0) {
-        setNotice(tr('clipboardEmpty'))
+        setNotice(sawFileUrl ? tr('clipboardFileUrlOnly') : tr('clipboardEmpty'))
         return
       }
       for (const file of files) {
@@ -514,7 +525,7 @@ export function InboxPage(props: InboxPageProps) {
                 <button type="button" className="dsc-btn dsc-icon-btn" title={tr('attach')} onClick={() => { fileRef.current?.click() }}>
                   <IconPaperclipOutlineRegular size={14} />
                 </button>
-                <button type="button" className="dsc-btn dsc-icon-btn" title={tr('pasteFiles')} onClick={pasteFromClipboard}>
+                <button type="button" className="dsc-btn dsc-icon-btn" title={tr('pasteFilesHint')} onClick={pasteFromClipboard}>
                   <IconCopyOutlineRegular size={14} />
                 </button>
                 <label className="dsc-check">
