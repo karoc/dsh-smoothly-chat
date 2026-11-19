@@ -11,6 +11,11 @@
   offers "Save a copy" instead of "Download", plus "Show folder" which reveals
   the containing directory in the OS file manager (folder only — the received
   file is never executed).
+- **Localized plugin card and detail page**: `locale/en.json` and
+  `locale/zh.json` carry `meta.title`, a full `meta.description` and a
+  one-image `meta.detail` document (`docs/DETAIL.md` / `docs/DETAIL.zh.md`), so
+  the Plugins page follows the DSH language instead of always showing English.
+  `release-check` now validates these entries and the images they name.
 - **Localized UI details**: relative times, the request address line and upload
   copy now come from the dictionaries — the panel follows the DSH language
   setting (zh/en, other languages fall back to English).

@@ -87,6 +87,51 @@ if (existsSync(join(root, 'cordis.patch.yml'))) {
   if (!patch.includes(pkg.name)) fail('cordis.patch.yml does not name the package')
 }
 
+// ── 4b. localized plugin card and detail documents ────────────────────────
+// The Plugins page reads `locale/<lang>.json` (meta.title / description /
+// detail). A missing or malformed entry silently falls back to English, which
+// is exactly the "why is my Chinese plugin card English?" defect.
+const localeDir = join(root, 'locale')
+if (existsSync(localeDir)) {
+  if (!pkg.files.includes('locale')) fail('files whitelist is missing locale')
+  for (const language of ['en', 'zh']) {
+    const path = join(localeDir, `${language}.json`)
+    if (!existsSync(path)) {
+      fail(`missing locale/${language}.json`)
+      continue
+    }
+    let meta
+    try {
+      meta = JSON.parse(readFileSync(path, 'utf8'))?.meta
+    } catch {
+      fail(`locale/${language}.json is not valid JSON`)
+      continue
+    }
+    if (typeof meta?.title !== 'string' || meta.title.trim() === '') fail(`locale/${language}.json has no meta.title`)
+    if (typeof meta?.description !== 'string' || meta.description.trim().length < 80) {
+      fail(`locale/${language}.json needs a meta.description that explains the plugin (>= 80 chars)`)
+    }
+    if (meta?.detail !== undefined) {
+      if (typeof meta.detail !== 'string' || !/^[\w./-]+\.(md|markdown)$/u.test(meta.detail) || meta.detail.startsWith('/') || meta.detail.includes('..')) {
+        fail(`locale/${language}.json has an invalid meta.detail path`)
+        continue
+      }
+      if (!existsSync(join(root, meta.detail))) {
+        fail(`locale/${language}.json names a missing detail document: ${meta.detail}`)
+        continue
+      }
+      const body = readFileSync(join(root, meta.detail), 'utf8')
+      const image = /!\[[^\]]*\]\(([^)]+)\)/u.exec(body)
+      if (image === null) fail(`${meta.detail} must contain exactly one feature image line`)
+      else if (!existsSync(join(root, dirname(meta.detail), image[1]))) {
+        fail(`${meta.detail} references a missing image: ${image[1]}`)
+      }
+    }
+  }
+  if (existsSync(join(root, 'docs')) && !pkg.files.includes('docs')) fail('files whitelist is missing docs')
+  notes.push('localized plugin card metadata is present')
+}
+
 // ── 5. build freshness (content stamp, not mtime) ─────────────────────────
 const stampPath = join(root, 'lib', 'build-stamp.json')
 if (!existsSync(stampPath)) {

@@ -11,7 +11,7 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -107,6 +107,18 @@ scenario('a missing build product is refused', () => {
 scenario('a missing build stamp is refused', () => {
   rmSync(join(clone, 'lib', 'build-stamp.json'), { force: true })
 }, 'missing lib/build-stamp.json')
+
+scenario('a missing localized card description is refused', () => {
+  const path = join(clone, 'locale', 'zh.json')
+  const parsed = JSON.parse(readFileSync(path, 'utf8'))
+  delete parsed.meta.description
+  writeFileSync(path, `${JSON.stringify(parsed, null, 2)}\n`)
+}, 'needs a meta.description')
+
+scenario('a detail document pointing at a missing image is refused', () => {
+  const path = join(clone, 'docs', 'DETAIL.zh.md')
+  writeFileSync(path, '![missing](nope.svg)\n')
+}, 'references a missing image')
 
 scenario('a bogus files entry is refused', () => {
   const path = join(clone, 'package.json')

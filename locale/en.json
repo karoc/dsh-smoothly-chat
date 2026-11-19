@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Smoothly Chat",
+    "description": "Peer-to-peer text and file messaging between DeepSeek Harness instances on the same LAN. Open the envelope icon in the left sidebar: pair once (one machine creates an invitation, the other pastes it, the first approves the request), then send text or files to one peer or to all of them. Messages are stored in a machine-level inbox and never create, read or append to a conversation, so no model request is made. Files are copied to the receiving machine on arrival — the source file is not needed afterwards. The mailbox listens on its own port (default 47811, opened to the LAN by the plugin, not DSH's web server) and every request is signed with a per-pair key; traffic is plain HTTP, so treat the LAN as trusted. Data lives under $DSH_HOME/smoothly-chat. Turning the plugin off stops the listener; the stored mailbox stays on disk.",
+    "detail": "docs/DETAIL.md"
+  }
+}
