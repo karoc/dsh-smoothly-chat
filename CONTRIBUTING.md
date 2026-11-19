@@ -44,8 +44,12 @@ exits non-zero; it also asserts a positive control passes.
 3. `npm run release:check` (must pass on a clean tree).
 4. `npm pack --dry-run` and read the file list.
 5. `npm publish` (runs the gate again through `prepublishOnly`).
-6. `npm run verify:publish` — the registry is eventually consistent; a timeout
-   is not a failed publish.
+6. `npm run verify:publish` — the registry is eventually consistent: a new
+   package first shows an npm-internal `0.0.0-stage` placeholder, then the real
+   version, and only later serves its tarball. "Registered but not yet served"
+   is propagation, not a failed publish — never republish over it. The check
+   prints one progress line per retry and never mixes three states into one
+   contradictory message.
 
 npm publishing is a human action when 2FA is enabled: an agent prepares
 everything up to "one command to publish" and hands that command over.
