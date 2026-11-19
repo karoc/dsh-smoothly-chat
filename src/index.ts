@@ -51,6 +51,8 @@ function peerPort(): number {
 
 /** Repository the update check compares against. */
 const REPOSITORY = 'karoc/dsh-smoothly-chat'
+/** Registry document used to learn the published `latest` version. */
+const REGISTRY_LATEST = 'https://registry.npmjs.org/dsh-smoothly-chat/latest'
 
 /** Cached update answer, so a curious click cannot burn the anonymous rate limit. */
 let updateCache: { at: number; value: UpdateInfo } | undefined
@@ -79,20 +81,35 @@ async function checkUpdate(): Promise<UpdateInfo> {
   }
   let value: UpdateInfo
   try {
-    const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/commits/main`, {
-      headers: { accept: 'application/vnd.github+json', 'user-agent': 'dsh-smoothly-chat' },
-      signal: AbortSignal.timeout(6_000),
-    })
-    if (!response.ok) throw new Error(`GitHub answered ${String(response.status)}`)
-    const data = await response.json() as { sha: string; commit?: { author?: { date?: string }; message?: string } }
+    const [registry, github] = await Promise.all([
+      fetch(REGISTRY_LATEST, {
+        headers: { accept: 'application/json', 'user-agent': 'dsh-smoothly-chat' },
+        signal: AbortSignal.timeout(6_000),
+      }).then(async response => response.ok ? await response.json() as { version?: string } : undefined).catch(() => undefined),
+      fetch(`https://api.github.com/repos/${REPOSITORY}/commits/main`, {
+        headers: { accept: 'application/vnd.github+json', 'user-agent': 'dsh-smoothly-chat' },
+        signal: AbortSignal.timeout(6_000),
+      }).then(async response => response.ok ? await response.json() as { sha: string; commit?: { author?: { date?: string }; message?: string } } : undefined).catch(() => undefined),
+    ])
+    const latestVersion = typeof registry?.version === 'string' ? registry.version : undefined
     value = {
       installed,
-      latest: {
-        commit: data.sha,
-        ...(data.commit?.author?.date === undefined ? {} : { date: data.commit.author.date }),
-        ...(data.commit?.message === undefined ? {} : { message: data.commit.message.split('\n')[0] }),
-      },
-      upToDate: installed.commit !== undefined && data.sha === installed.commit,
+      ...(latestVersion === undefined ? {} : { latestVersion }),
+      ...(github === undefined ? {} : {
+        latest: {
+          commit: github.sha,
+          ...(github.commit?.author?.date === undefined ? {} : { date: github.commit.author.date }),
+          ...(github.commit?.message === undefined ? {} : { message: github.commit.message.split('\n')[0] }),
+        },
+      }),
+      // Version is the user-facing truth; the commit only breaks ties for a
+      // git install of the same version.
+      upToDate: latestVersion !== undefined && installed.version !== 'unknown'
+        ? latestVersion === installed.version
+        : installed.commit !== undefined && github !== undefined && github.sha === installed.commit,
+    }
+    if (latestVersion === undefined && github === undefined) {
+      value.error = 'registry and repository both unreachable'
     }
   } catch (error) {
     value = { installed, upToDate: false, error: error instanceof Error ? error.message : String(error) }
@@ -116,7 +133,10 @@ export function apply(ctx: Context): void {
     })
     node = created
     api = createApiHandler(created, { updateSource: checkUpdate })
-    console.log(`[smoothly-chat] mailbox root: ${dataRoot()} (device ${created.self.deviceId.slice(0, 8)}…)`)
+    const version = await readFile(new URL('../package.json', import.meta.url), 'utf8')
+      .then(text => (JSON.parse(text) as { version?: string }).version ?? 'unknown')
+      .catch(() => 'unknown')
+    console.log(`[smoothly-chat] v${version} mailbox root: ${dataRoot()} (device ${created.self.deviceId.slice(0, 8)}…)`)
     try {
       await created.start()
     } catch (error) {

@@ -353,7 +353,10 @@ export function InboxPage(props: InboxPageProps) {
                     const short = (commit?: string): string => commit === undefined ? '?' : commit.slice(0, 7)
                     if (info.error !== undefined) setNotice(tr('updateFailed', { message: info.error }))
                     else if (info.upToDate) setNotice(tr('updateCurrent', { version: info.installed.version, commit: short(info.installed.commit) }))
-                    else setNotice(tr('updateAvailable', { commit: short(info.latest?.commit), date: info.latest?.date ?? '' }))
+                    else setNotice(tr('updateAvailable', {
+                      version: info.latestVersion ?? short(info.latest?.commit),
+                      installed: info.installed.version,
+                    }))
                   })
                 }}
               >

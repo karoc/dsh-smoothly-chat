@@ -90,6 +90,8 @@ export interface ApiHandler {
 export interface UpdateInfo {
   installed: { version: string; commit?: string; builtAt?: string }
   latest?: { commit: string; date?: string; message?: string }
+  /** Version the registry currently serves as `latest`. */
+  latestVersion?: string
   upToDate: boolean
   error?: string
 }

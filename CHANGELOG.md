@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.2 — unreleased
+
+- **Update check is version-aware**: it compares the installed version with the
+  registry's `latest` (commit comparison only breaks ties for Git installs) and
+  the answer now says which route actually applies — registry install → the
+  Plugins page's Update button; Git install → uninstall and reinstall by package
+  name. The startup log now prints the version next to the mailbox root.
+
 ## v0.1.1 — unreleased
 
 - **Transfer progress**: the composer shows the browser→host upload percentage

@@ -76,6 +76,7 @@ export interface ThreadMessage {
 export interface UpdateInfo {
   installed: { version: string; commit?: string; builtAt?: string }
   latest?: { commit: string; date?: string; message?: string }
+  latestVersion?: string
   upToDate: boolean
   error?: string
 }
